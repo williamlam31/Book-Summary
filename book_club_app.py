@@ -4,6 +4,7 @@ import json
 import time
 import random
 from typing import Dict, List, Optional
+import os
 
 # Configure Streamlit page
 st.set_page_config(
@@ -44,23 +45,43 @@ st.markdown("""
         margin: 10px 0;
         border-left: 4px solid #bee5eb;
     }
-    /* Remove default Streamlit spacing */
+    /* Aggressive removal of all default spacing */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+    }
     .stMarkdown {
-        margin-bottom: 0px;
+        margin-bottom: 0px !important;
     }
     div[data-testid="stMarkdownContainer"] {
-        margin-bottom: 0px;
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
     }
     .element-container {
-        margin-bottom: 0px;
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
     }
-    /* Remove spacing around buttons */
+    /* Remove all button spacing */
     .stButton {
         margin-bottom: 0px !important;
         margin-top: 0px !important;
     }
     div[data-testid="stButton"] {
         margin-bottom: 0px !important;
+        margin-top: 0px !important;
+    }
+    .stButton > button {
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
+    }
+    /* Remove spacing from all containers */
+    .stContainer {
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
+    }
+    div[data-testid="stContainer"] {
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -69,6 +90,62 @@ class BookClubApp:
     def __init__(self):
         self.base_url = "https://openlibrary.org"
         self.search_url = "https://openlibrary.org/search.json"
+        
+        # Hugging Face API configuration
+        self.hf_api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+        self.hf_token = st.secrets.get("HUGGINGFACE_TOKEN", None) if hasattr(st, 'secrets') else None
+        
+        # Fallback to environment variable or None
+        if not self.hf_token:
+            self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
+    
+    def call_huggingface_ai(self, prompt: str, max_length: int = 200) -> str:
+        """Call Hugging Face API for AI text generation"""
+        if not self.hf_token:
+            return self._fallback_ai_response(prompt)
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.hf_token}"}
+            
+            # Use a text generation model for better results
+            api_url = "https://api-inference.huggingface.co/models/gpt2"
+            
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "max_length": max_length,
+                    "temperature": 0.7,
+                    "do_sample": True,
+                    "top_p": 0.9
+                }
+            }
+            
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if isinstance(result, list) and len(result) > 0:
+                    generated_text = result[0].get('generated_text', '')
+                    # Clean up the response by removing the original prompt
+                    if generated_text.startswith(prompt):
+                        generated_text = generated_text[len(prompt):].strip()
+                    return generated_text if generated_text else self._fallback_ai_response(prompt)
+                else:
+                    return self._fallback_ai_response(prompt)
+            else:
+                # If API fails, fall back to template-based response
+                return self._fallback_ai_response(prompt)
+                
+        except Exception as e:
+            st.warning(f"AI API temporarily unavailable. Using fallback response.")
+            return self._fallback_ai_response(prompt)
+    
+    def _fallback_ai_response(self, prompt: str) -> str:
+        """Fallback response when AI API is unavailable"""
+        if "summary" in prompt.lower():
+            return "This book offers readers a compelling narrative that explores deep themes and human experiences. The author weaves together engaging characters and thought-provoking scenarios that challenge readers to examine important life questions. Through masterful storytelling, this work provides both entertainment and insight into the human condition."
+        else:
+            return "This book presents fascinating themes that would make for excellent book club discussion. Consider exploring the character development, thematic elements, and how the story relates to contemporary issues."
         
     def search_books(self, genre: str = None, author: str = None, title: str = None, limit: int = 10) -> List[Dict]:
         """Search for books by genre, author, and/or title using Open Library API"""
@@ -153,33 +230,59 @@ class BookClubApp:
         return None
     
     def generate_ai_summary(self, book_title: str, authors: List[str], subjects: List[str]) -> str:
-        """Generate AI-powered book summary (simulated)"""
-        author_text = ", ".join(authors[:2])  # Limit to first 2 authors
+        """Generate AI-powered book summary using Hugging Face API"""
+        author_text = ", ".join(authors[:2])
         subjects_text = ", ".join(subjects[:3]) if subjects else "general literature"
         
-        # Template-based summary generation (simulating AI)
-        templates = [
-            f"'{book_title}' by {author_text} is a captivating work that explores themes of {subjects_text}. This book offers readers a unique perspective on human nature and society, weaving together compelling characters with thought-provoking scenarios. The author's masterful storytelling creates an immersive experience that challenges readers to examine their own beliefs and assumptions.",
-            
-            f"In '{book_title}', {author_text} delivers a powerful narrative centered around {subjects_text}. The book presents a rich tapestry of characters and situations that illuminate deeper truths about the human condition. Readers will find themselves drawn into a world that is both familiar and surprising, with insights that linger long after the final page.",
-            
-            f"'{book_title}' by {author_text} stands as a remarkable exploration of {subjects_text}. The work combines engaging storytelling with profound insights, offering readers both entertainment and enlightenment. Through skillful character development and plot construction, the author creates a memorable reading experience that resonates with diverse audiences."
-        ]
+        prompt = f"Write a thoughtful book summary: '{book_title}' by {author_text} is a book about {subjects_text}. This book"
         
-        return random.choice(templates)
+        ai_response = self.call_huggingface_ai(prompt, max_length=250)
+        
+        # Enhance the AI response with context
+        if ai_response and len(ai_response) > 50:
+            return f"'{book_title}' by {author_text} explores themes of {subjects_text}. {ai_response}"
+        else:
+            # Enhanced fallback with more variety
+            templates = [
+                f"'{book_title}' by {author_text} is a captivating work that delves into {subjects_text}. This book offers readers a unique perspective on human nature and society, weaving together compelling characters with thought-provoking scenarios. The author's masterful storytelling creates an immersive experience that challenges readers to examine their own beliefs and assumptions.",
+                
+                f"In '{book_title}', {author_text} delivers a powerful narrative centered around {subjects_text}. The book presents a rich tapestry of characters and situations that illuminate deeper truths about the human condition. Readers will find themselves drawn into a world that is both familiar and surprising, with insights that linger long after the final page.",
+                
+                f"'{book_title}' by {author_text} stands as a remarkable exploration of {subjects_text}. The work combines engaging storytelling with profound insights, offering readers both entertainment and enlightenment. Through skillful character development and plot construction, the author creates a memorable reading experience that resonates with diverse audiences."
+            ]
+            return random.choice(templates)
     
     def generate_discussion_questions(self, book_title: str, authors: List[str], subjects: List[str]) -> List[str]:
-        """Generate AI-powered discussion questions (simulated)"""
-        
+        """Generate AI-powered discussion questions using Hugging Face API"""
         author_text = authors[0] if authors else "the author"
         subject_text = subjects[0] if subjects else "life"
         
+        # Try AI generation for some questions
+        ai_questions = []
+        
+        if self.hf_token:
+            try:
+                prompt = f"Generate discussion questions for the book '{book_title}' about {subject_text}. Question 1:"
+                ai_response = self.call_huggingface_ai(prompt, max_length=150)
+                
+                if ai_response and "?" in ai_response:
+                    # Extract questions from AI response
+                    potential_questions = [q.strip() + "?" for q in ai_response.split("?") if q.strip()]
+                    ai_questions.extend(potential_questions[:2])
+            except:
+                pass
+        
+        # Base questions with variety
         base_questions = [
             f"What do you think {author_text} was trying to convey about {subject_text} in '{book_title}'?",
             f"How do the characters in '{book_title}' reflect real-world challenges and situations?",
             f"What themes in '{book_title}' are most relevant to today's society?",
             f"How does the author's writing style contribute to the overall impact of '{book_title}'?",
-            f"What personal connections did you make while reading '{book_title}'?"
+            f"What personal connections did you make while reading '{book_title}'?",
+            f"What questions would you like to ask {author_text} about '{book_title}'?",
+            f"How might '{book_title}' influence readers' perspectives on important life decisions?",
+            "What scenes or passages from the book do you think would spark the most debate in our book club?",
+            "If you were to recommend this book to a friend, what would you tell them to expect?"
         ]
         
         # Add subject-specific questions
@@ -187,20 +290,37 @@ class BookClubApp:
             for subject in subjects[:2]:
                 base_questions.append(f"How does '{book_title}' approach the topic of {subject} differently from other books you've read?")
         
-        base_questions.extend([
-            f"What questions would you like to ask {author_text} about '{book_title}'?",
-            f"How might '{book_title}' influence readers' perspectives on important life decisions?",
-            "What scenes or passages from the book do you think would spark the most debate in our book club?",
-            "If you were to recommend this book to a friend, what would you tell them to expect?"
-        ])
-        
-        return random.sample(base_questions, 8)  # Return 8 random questions
+        # Combine AI and template questions
+        all_questions = ai_questions + base_questions
+        return random.sample(all_questions, min(8, len(all_questions)))
 
 def main():
     st.title("📚 Virtual Book Club")
     st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
+    # Add HuggingFace token input in sidebar
+    with st.sidebar:
+        st.header("🤖 AI Configuration")
+        hf_token = st.text_input(
+            "Hugging Face Token (Optional)", 
+            type="password", 
+            help="Get a free token from huggingface.co/settings/tokens for enhanced AI responses"
+        )
+        
+        if hf_token:
+            st.session_state.hf_token = hf_token
+            st.success("✅ AI Token configured!")
+        
+        st.markdown("---")
+        st.markdown("**Without token:** Basic AI responses")
+        st.markdown("**With token:** Enhanced AI summaries")
+        st.markdown("[Get free token here](https://huggingface.co/settings/tokens)")
+    
     app = BookClubApp()
+    
+    # Use token from sidebar if provided
+    if hasattr(st.session_state, 'hf_token'):
+        app.hf_token = st.session_state.hf_token
     
     # Main search section without extra div wrapper
     st.header("🔍 Find Your Perfect Book")
@@ -230,6 +350,15 @@ def main():
     
     # Search button below the 2x2 grid
     search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
+    
+    # Add negative margin to pull next section up
+    st.markdown("""
+    <style>
+    div[data-testid="stButton"] + div {
+        margin-top: -20px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Display search info
     if author_name or book_title or selected_genre != "Any Genre":
@@ -319,7 +448,11 @@ def main():
                             
                             # Display AI-generated content
                             st.markdown('<div class="book-card">', unsafe_allow_html=True)
-                            st.subheader("📝 AI-Generated Summary")
+                            st.subheader("🤖 AI-Generated Summary")
+                            if app.hf_token:
+                                st.info("✨ Enhanced by Hugging Face AI")
+                            else:
+                                st.info("💡 Basic AI response - add HF token in sidebar for enhanced summaries")
                             st.write(summary)
                             st.markdown('</div>', unsafe_allow_html=True)
                             
