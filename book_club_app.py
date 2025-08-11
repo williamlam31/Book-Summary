@@ -41,7 +41,7 @@ st.markdown("""
         background-color: #f8f9fa;
         padding: 25px;
         border-radius: 15px;
-        margin: 20px 0;
+        margin: 10px 0 20px 0;
         border: 2px solid #e9ecef;
     }
     .search-info {
