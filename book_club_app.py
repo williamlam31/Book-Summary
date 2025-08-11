@@ -9,8 +9,6 @@ st.set_page_config(
     page_title="Virtual Book Club",
     page_icon="📚",
     layout="wide"
-     <div style='text-align: center; color: #666;'>
-        Powered by Open Library API & AI ✨<br>
 )
 
 # Custom CSS for better styling
