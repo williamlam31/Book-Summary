@@ -362,6 +362,7 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
+    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
     # AI capabilities section
     st.markdown("""
@@ -550,6 +551,6 @@ def main():
             st.write("• Checking spelling of author name or book title")
             st.write("• Using partial matches (e.g., just first name)")
     
-   
+
 if __name__ == "__main__":
     main()
