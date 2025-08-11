@@ -14,13 +14,6 @@ st.set_page_config(
 # Custom CSS for better styling
 st.markdown("""
 <style>
-    .book-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 10px 0;
-        border-left: 5px solid #4CAF50;
-    }
     .discussion-section {
         background-color: #e8f4fd;
         padding: 15px;
@@ -186,7 +179,7 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*Powered by OpenLibrary*")
+    st.markdown("*Powered by Open Library API*")
     
     app = BookClubApp()
     
