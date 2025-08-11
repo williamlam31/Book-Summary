@@ -10,6 +10,8 @@ st.set_page_config(
     page_title="Virtual Book Club",
     page_icon="📚",
     layout="wide"
+     <div style='text-align: center; color: #666;'>
+        📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
 )
 
 # Custom CSS for better styling
@@ -372,15 +374,6 @@ def main():
         - **Author:** Agatha Christie
         - **Genre:** Science Fiction (browse popular sci-fi books)
         """)
-    
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-        📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
-        <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
-    </div>
-    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
