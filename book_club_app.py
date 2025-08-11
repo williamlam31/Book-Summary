@@ -364,6 +364,15 @@ def main():
     st.title("📚 Virtual Book Club")
     st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
+    # AI capabilities section
+    st.markdown("""
+    Our AI will help you:
+    - 📚 **Discover** books matching your criteria
+    - 📝 **Generate** thoughtful summaries and analysis
+    - 💭 **Create** engaging discussion questions
+    - 🎯 **Provide** book club facilitation tips
+    """)
+    
     # Add HuggingFace token input in sidebar
     with st.sidebar:
         st.header("🤖 AI Configuration")
