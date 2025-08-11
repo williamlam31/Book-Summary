@@ -242,7 +242,9 @@ def main():
             search_criteria.append(f"**Title:** {book_title}")
         
         st.markdown('<div class="search-info">', unsafe_allow_html=True)
-
+        st.markdown(f"**🎯 Search Criteria:** {' | '.join(search_criteria)}")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     # Handle search
     if search_button:
         if not any([selected_genre != "Any Genre", author_name.strip(), book_title.strip()]):
