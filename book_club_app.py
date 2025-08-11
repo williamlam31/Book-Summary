@@ -186,7 +186,7 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
+    st.markdown("*Powered by OpenLibrary*")
     
     app = BookClubApp()
     
