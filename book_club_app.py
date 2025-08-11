@@ -362,7 +362,6 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
     # AI capabilities section
     st.markdown("""
@@ -436,7 +435,6 @@ def main():
             search_criteria.append(f"**Title:** {book_title}")
         
         st.markdown('<div class="search-info">', unsafe_allow_html=True)
-        st.markdown(f"**🎯 Search Criteria:** {' | '.join(search_criteria)}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Handle search
@@ -552,35 +550,6 @@ def main():
             st.write("• Checking spelling of author name or book title")
             st.write("• Using partial matches (e.g., just first name)")
     
-    # Welcome section (shown when no search has been performed)
-    elif not st.session_state.get('search_performed'):
-        st.markdown("""
-        ## Welcome to Your Virtual Book Club! 🌟
-        
-        **How to get started:**
-        
-        1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
-        2. ✍️ **Enter an author name** if you have someone specific in mind
-        3. 📚 **Add a book title** if you're looking for something particular
-        4. 🔍 **Click "Search for Books"** to discover amazing reads!
-        
-        Perfect for book clubs, literature classes, or solo readers who want deeper insights!
-        
-        ### 🚀 Quick Examples to Try:
-        - **Genre:** Fantasy + **Author:** Brandon Sanderson
-        - **Genre:** Mystery + **Title:** Murder
-        - **Author:** Agatha Christie
-        - **Genre:** Science Fiction (browse popular sci-fi books)
-        """)
-    
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-    📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
-    <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
-    </div>
-    """, unsafe_allow_html=True)
-
+   
 if __name__ == "__main__":
     main()
