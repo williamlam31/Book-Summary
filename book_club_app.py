@@ -364,10 +364,10 @@ def main():
     st.title("📚 Virtual Book Club")    
 
     st.markdown("""
-    - 📚 **Discover** books matching your criteria
-    - 📝 **Generate** thoughtful summaries and analysis
-    - 💭 **Create** engaging discussion questions
-    - 🎯 **Provide** book club facilitation tips
+    - **Locate** books matching your criteria
+    - **Generate** thoughtful summaries and analysis
+    - **Formulate** engaging discussion questions
+
     """)
     
     with st.sidebar:
