@@ -389,7 +389,7 @@ def main():
         app.hf_token = st.session_state.hf_token
     
     # Main search section
-    st.header("🔍 Find Your Book(s)")
+    st.header("Find Your Book(s)")
     
     # Create 2x2 grid for input fields
     col1, col2 = st.columns(2)
