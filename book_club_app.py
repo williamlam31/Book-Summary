@@ -1,4 +1,4 @@
-import streamlit as st
+ximport streamlit as st
 import requests
 import json
 import time
@@ -361,12 +361,9 @@ class BookClubApp:
         return random.sample(all_questions, min(8, len(all_questions)))
 
 def main():
-    st.title("📚 Virtual Book Club")
-    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
-    
+    st.title("📚 Virtual Book Club")    
 
     st.markdown("""
-    Our AI will help you:
     - 📚 **Discover** books matching your criteria
     - 📝 **Generate** thoughtful summaries and analysis
     - 💭 **Create** engaging discussion questions
