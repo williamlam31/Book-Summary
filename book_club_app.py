@@ -13,76 +13,152 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for better styling
+# Custom CSS for better styling and removing white bars
 st.markdown("""
 <style>
-    .book-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 10px 0;
-        border-left: 5px solid #4CAF50;
-    }
-    .discussion-section {
-        background-color: #e8f4fd;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-    }
-    .genre-tag {
-        display: inline-block;
-        background-color: #4CAF50;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 15px;
-        margin: 2px;
-        font-size: 12px;
-    }
-    .search-info {
-        background-color: #d1ecf1;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-        border-left: 4px solid #bee5eb;
-    }
-    /* Aggressive removal of all default spacing */
-    .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 0rem;
-    }
-    .stMarkdown {
-        margin-bottom: 0px !important;
-    }
-    div[data-testid="stMarkdownContainer"] {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    .element-container {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    /* Remove all button spacing */
-    .stButton {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    div[data-testid="stButton"] {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    .stButton > button {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    /* Remove spacing from all containers */
-    .stContainer {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
-    div[data-testid="stContainer"] {
-        margin-bottom: 0px !important;
-        margin-top: 0px !important;
-    }
+.book-card {
+    background-color: #f0f2f6;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 10px 0;
+    border-left: 5px solid #4CAF50;
+}
+
+.discussion-section {
+    background-color: #e8f4fd;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.genre-tag {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    margin: 2px;
+    font-size: 12px;
+}
+
+.search-info {
+    background-color: #d1ecf1;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border-left: 4px solid #bee5eb;
+}
+
+/* Comprehensive removal of all white bars and containers */
+.main .block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 0rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* Target all potential container elements */
+.stMarkdown {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+}
+
+div[data-testid="stMarkdownContainer"] {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+}
+
+.element-container {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+}
+
+/* Remove all button spacing and backgrounds */
+.stButton {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+}
+
+div[data-testid="stButton"] {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+}
+
+.stButton > button {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+}
+
+/* Remove spacing and backgrounds from all containers */
+.stContainer {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+    padding: 0px !important;
+}
+
+div[data-testid="stContainer"] {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
+    background-color: transparent !important;
+    padding: 0px !important;
+}
+
+/* Target column containers specifically */
+div[data-testid="column"] {
+    background-color: transparent !important;
+    padding: 0px !important;
+    margin: 0px !important;
+}
+
+/* Remove backgrounds from all div elements that might be causing bars */
+div[class*="css-"] {
+    background-color: transparent !important;
+}
+
+/* Target specific container classes that might be causing the bars */
+.css-1d391kg, .css-12oz5g7, .css-1kyxreq {
+    background-color: transparent !important;
+    padding: 0px !important;
+    margin: 0px !important;
+}
+
+/* Remove any default streamlit container styling */
+[data-testid="stVerticalBlock"] {
+    background-color: transparent !important;
+    padding: 0px !important;
+    margin: 0px !important;
+}
+
+[data-testid="stHorizontalBlock"] {
+    background-color: transparent !important;
+    padding: 0px !important;
+    margin: 0px !important;
+}
+
+/* Additional targeting for any remaining white/light containers */
+div[style*="background-color"] {
+    background-color: transparent !important;
+}
+
+/* Ensure main content area has no background */
+.main {
+    background-color: transparent !important;
+}
+
+/* Remove any remaining default padding/margins from containers */
+section[data-testid="stSidebar"] + div {
+    background-color: transparent !important;
+}
+
+/* Target any remaining container elements */
+.stApp > div {
+    background-color: transparent !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,7 +174,7 @@ class BookClubApp:
         # Fallback to environment variable or None
         if not self.hf_token:
             self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
-    
+
     def call_huggingface_ai(self, prompt: str, max_length: int = 200) -> str:
         """Call Hugging Face API for AI text generation"""
         if not self.hf_token:
@@ -106,7 +182,6 @@ class BookClubApp:
         
         try:
             headers = {"Authorization": f"Bearer {self.hf_token}"}
-            
             # Use a text generation model for better results
             api_url = "https://api-inference.huggingface.co/models/gpt2"
             
@@ -139,14 +214,14 @@ class BookClubApp:
         except Exception as e:
             st.warning(f"AI API temporarily unavailable. Using fallback response.")
             return self._fallback_ai_response(prompt)
-    
+
     def _fallback_ai_response(self, prompt: str) -> str:
         """Fallback response when AI API is unavailable"""
         if "summary" in prompt.lower():
             return "This book offers readers a compelling narrative that explores deep themes and human experiences. The author weaves together engaging characters and thought-provoking scenarios that challenge readers to examine important life questions. Through masterful storytelling, this work provides both entertainment and insight into the human condition."
         else:
             return "This book presents fascinating themes that would make for excellent book club discussion. Consider exploring the character development, thematic elements, and how the story relates to contemporary issues."
-        
+
     def search_books(self, genre: str = None, author: str = None, title: str = None, limit: int = 10) -> List[Dict]:
         """Search for books by genre, author, and/or title using Open Library API"""
         try:
@@ -159,19 +234,16 @@ class BookClubApp:
             
             # Build search query based on inputs
             search_parts = []
-            
             if title and title.strip():
                 search_parts.append(f'title:"{title.strip()}"')
-                
             if author and author.strip():
                 search_parts.append(f'author:"{author.strip()}"')
-            
             if genre and genre != "Any Genre":
                 # Map user-friendly genres to search terms
                 genre_mapping = {
                     "Fiction": "fiction",
                     "Mystery": "mystery",
-                    "Romance": "romance", 
+                    "Romance": "romance",
                     "Science Fiction": "science fiction",
                     "Fantasy": "fantasy",
                     "Biography": "biography",
@@ -185,7 +257,6 @@ class BookClubApp:
                     "Thriller": "thriller",
                     "Adventure": "adventure"
                 }
-                
                 search_term = genre_mapping.get(genre, genre.lower())
                 search_parts.append(f'subject:"{search_term}"')
             
@@ -200,10 +271,9 @@ class BookClubApp:
             
             response = requests.get(self.search_url, params=params, timeout=10)
             response.raise_for_status()
-            
             data = response.json()
-            books = []
             
+            books = []
             for book in data.get('docs', []):
                 if book.get('title') and book.get('author_name'):
                     books.append({
@@ -222,13 +292,13 @@ class BookClubApp:
         except Exception as e:
             st.error(f"Error fetching books: {str(e)}")
             return []
-    
+
     def get_cover_url(self, cover_id: int, size: str = "M") -> str:
         """Get book cover URL from cover ID"""
         if cover_id:
             return f"https://covers.openlibrary.org/b/id/{cover_id}-{size}.jpg"
         return None
-    
+
     def generate_ai_summary(self, book_title: str, authors: List[str], subjects: List[str]) -> str:
         """Generate AI-powered book summary using Hugging Face API"""
         author_text = ", ".join(authors[:2])
@@ -245,13 +315,11 @@ class BookClubApp:
             # Enhanced fallback with more variety
             templates = [
                 f"'{book_title}' by {author_text} is a captivating work that delves into {subjects_text}. This book offers readers a unique perspective on human nature and society, weaving together compelling characters with thought-provoking scenarios. The author's masterful storytelling creates an immersive experience that challenges readers to examine their own beliefs and assumptions.",
-                
                 f"In '{book_title}', {author_text} delivers a powerful narrative centered around {subjects_text}. The book presents a rich tapestry of characters and situations that illuminate deeper truths about the human condition. Readers will find themselves drawn into a world that is both familiar and surprising, with insights that linger long after the final page.",
-                
                 f"'{book_title}' by {author_text} stands as a remarkable exploration of {subjects_text}. The work combines engaging storytelling with profound insights, offering readers both entertainment and enlightenment. Through skillful character development and plot construction, the author creates a memorable reading experience that resonates with diverse audiences."
             ]
             return random.choice(templates)
-    
+
     def generate_discussion_questions(self, book_title: str, authors: List[str], subjects: List[str]) -> List[str]:
         """Generate AI-powered discussion questions using Hugging Face API"""
         author_text = authors[0] if authors else "the author"
@@ -259,12 +327,10 @@ class BookClubApp:
         
         # Try AI generation for some questions
         ai_questions = []
-        
         if self.hf_token:
             try:
                 prompt = f"Generate discussion questions for the book '{book_title}' about {subject_text}. Question 1:"
                 ai_response = self.call_huggingface_ai(prompt, max_length=150)
-                
                 if ai_response and "?" in ai_response:
                     # Extract questions from AI response
                     potential_questions = [q.strip() + "?" for q in ai_response.split("?") if q.strip()]
@@ -296,17 +362,21 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
+    st.markdown("*How to get started:
+        
+        1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
+        2. ✍️ **Enter an author name** if you have someone specific in mind
+        3. 📚 **Add a book title** if you're looking for something particular
+        4. 🔍 **Click "Search for Books"** to discover amazing reads!*")*
     
     # Add HuggingFace token input in sidebar
     with st.sidebar:
         st.header("🤖 AI Configuration")
         hf_token = st.text_input(
-            "Hugging Face Token (Optional)", 
-            type="password", 
+            "Hugging Face Token (Optional)",
+            type="password",
             help="Get a free token from huggingface.co/settings/tokens for enhanced AI responses"
         )
-        
         if hf_token:
             st.session_state.hf_token = hf_token
             st.success("✅ AI Token configured!")
@@ -322,7 +392,7 @@ def main():
     if hasattr(st.session_state, 'hf_token'):
         app.hf_token = st.session_state.hf_token
     
-    # Main search section without extra div wrapper
+    # Main search section
     st.header("🔍 Find Your Perfect Book")
     
     # Create 2x2 grid for input fields
@@ -330,8 +400,8 @@ def main():
     
     with col1:
         genres = [
-            "Any Genre", "Fiction", "Mystery", "Romance", "Science Fiction", 
-            "Fantasy", "Biography", "History", "Self-Help", "Business", 
+            "Any Genre", "Fiction", "Mystery", "Romance", "Science Fiction",
+            "Fantasy", "Biography", "History", "Self-Help", "Business",
             "Philosophy", "Psychology", "Poetry", "Horror", "Thriller", "Adventure"
         ]
         selected_genre = st.selectbox("📖 Select Genre:", genres)
@@ -350,15 +420,6 @@ def main():
     
     # Search button below the 2x2 grid
     search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
-    
-    # Add negative margin to pull next section up
-    st.markdown("""
-    <style>
-    div[data-testid="stButton"] + div {
-        margin-top: -20px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     
     # Display search info
     if author_name or book_title or selected_genre != "Any Genre":
@@ -395,36 +456,35 @@ def main():
             st.header(f"📚 Found {len(st.session_state.books)} Books")
             
             for i, book in enumerate(st.session_state.books):
-                with st.container():
-                    col1, col2 = st.columns([1, 3])
-                    
-                    with col1:
-                        # Display book cover
-                        cover_url = app.get_cover_url(book['cover_id'])
-                        if cover_url:
-                            try:
-                                st.image(cover_url, width=120)
-                            except:
-                                st.info("📖 No cover available")
-                        else:
+                col1, col2 = st.columns([1, 3])
+                
+                with col1:
+                    # Display book cover
+                    cover_url = app.get_cover_url(book['cover_id'])
+                    if cover_url:
+                        try:
+                            st.image(cover_url, width=120)
+                        except:
                             st.info("📖 No cover available")
+                    else:
+                        st.info("📖 No cover available")
+                
+                with col2:
+                    st.markdown(f"**{book['title']}**")
+                    st.write(f"*by {', '.join(book['authors'][:2])}*")
                     
-                    with col2:
-                        st.markdown(f"**{book['title']}**")
-                        st.write(f"*by {', '.join(book['authors'][:2])}*")
-                        
-                        if book['year']:
-                            st.write(f"📅 Published: {book['year']}")
-                        
-                        if book['rating']:
-                            st.write(f"⭐ Rating: {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
-                        
-                        # Display subjects as tags
-                        if book['subjects']:
-                            subjects_html = ""
-                            for subject in book['subjects'][:3]:
-                                subjects_html += f'<span class="genre-tag">{subject}</span>'
-                            st.markdown(subjects_html, unsafe_allow_html=True)
+                    if book['year']:
+                        st.write(f"📅 Published: {book['year']}")
+                    
+                    if book['rating']:
+                        st.write(f"⭐ Rating: {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
+                    
+                    # Display subjects as tags
+                    if book['subjects']:
+                        subjects_html = ""
+                        for subject in book['subjects'][:3]:
+                            subjects_html += f'<span class="genre-tag">{subject}</span>'
+                        st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     # Button to generate AI content for this book
                     if st.button(f"🤖 Click Here for Summary and Discussion Questions '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
@@ -434,15 +494,15 @@ def main():
                             
                             # Generate AI summary
                             summary = app.generate_ai_summary(
-                                book['title'], 
-                                book['authors'], 
+                                book['title'],
+                                book['authors'],
                                 book['subjects']
                             )
                             
                             # Generate discussion questions
                             questions = app.generate_discussion_questions(
-                                book['title'], 
-                                book['authors'], 
+                                book['title'],
+                                book['authors'],
                                 book['subjects']
                             )
                             
@@ -464,7 +524,6 @@ def main():
                             
                             # Reading recommendations
                             st.subheader("🎯 Book Club Recommendations")
-                            
                             rec_col1, rec_col2 = st.columns(2)
                             
                             with rec_col1:
@@ -480,8 +539,9 @@ def main():
                                 st.write("• Mark passages that resonate with you")
                                 st.write("• Consider how the book relates to current events")
                                 st.write("• Come prepared with your own questions")
-                    
-                    st.divider()
+                
+                st.divider()
+        
         else:
             st.warning("😔 No books found matching your criteria. Try:")
             st.write("• Broadening your search (use 'Any Genre')")
@@ -494,6 +554,7 @@ def main():
         ## Welcome to Your Virtual Book Club! 🌟
         
         **How to get started:**
+        
         1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
         2. ✍️ **Enter an author name** if you have someone specific in mind
         3. 📚 **Add a book title** if you're looking for something particular
@@ -501,7 +562,7 @@ def main():
         
         Our AI will help you:
         - 📚 **Discover** books matching your criteria
-        - 📝 **Generate** thoughtful summaries and analysis  
+        - 📝 **Generate** thoughtful summaries and analysis
         - 💭 **Create** engaging discussion questions
         - 🎯 **Provide** book club facilitation tips
         
@@ -518,8 +579,8 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #666;'>
-        📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
-        <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
+    📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
+    <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
     </div>
     """, unsafe_allow_html=True)
 
