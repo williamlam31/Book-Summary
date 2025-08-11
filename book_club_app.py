@@ -389,7 +389,7 @@ def main():
         app.hf_token = st.session_state.hf_token
     
     # Main search section
-    st.header("🔍 Find Your Perfect Book")
+    st.header("🔍 Find Your Book(s)")
     
     # Create 2x2 grid for input fields
     col1, col2 = st.columns(2)
@@ -400,24 +400,24 @@ def main():
             "Fantasy", "Biography", "History", "Self-Help", "Business",
             "Philosophy", "Psychology", "Poetry", "Horror", "Thriller", "Adventure"
         ]
-        selected_genre = st.selectbox("📖 Select Genre:", genres)
+        selected_genre = st.selectbox("Genre:", genres)
     
     with col2:
-        book_limit = st.selectbox("📊 Number of Results:", [5, 8, 10, 15], index=1)
+        book_limit = st.selectbox("Number of Results:", [5, 8, 10, 15], index=1)
     
     # Second row
     col3, col4 = st.columns(2)
     
     with col3:
-        author_name = st.text_input("✍️ Author Name (optional):", placeholder="e.g., Jane Austen, Stephen King")
+        author_name = st.text_input("Author (optional):", placeholder="e.g., Jane Austen, Stephen King")
     
     with col4:
-        book_title = st.text_input("📚 Book Title (optional):", placeholder="e.g., Pride and Prejudice")
+        book_title = st.text_input("Book Title (optional):", placeholder="e.g., Pride and Prejudice")
     
-    # Search button below the 2x2 grid
+
     search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
     
-    # Display search info
+
     if author_name or book_title or selected_genre != "Any Genre":
         search_criteria = []
         if selected_genre != "Any Genre":
