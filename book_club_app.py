@@ -5,13 +5,12 @@ import time
 import random
 from typing import Dict, List, Optional
 
-# Configure Streamlit page
 st.set_page_config(
     page_title="Virtual Book Club",
     page_icon="📚",
     layout="wide"
      <div style='text-align: center; color: #666;'>
-        📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
+        Powered by Open Library API & AI ✨<br>
 )
 
 # Custom CSS for better styling
