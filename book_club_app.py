@@ -1,4 +1,4 @@
-ximport streamlit as st
+import streamlit as st
 import requests
 import json
 import time
