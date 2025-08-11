@@ -362,12 +362,7 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*How to get started:
-        
-        1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
-        2. ✍️ **Enter an author name** if you have someone specific in mind
-        3. 📚 **Add a book title** if you're looking for something particular
-        4. 🔍 **Click "Search for Books"** to discover amazing reads!*")*
+    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
     # Add HuggingFace token input in sidebar
     with st.sidebar:
