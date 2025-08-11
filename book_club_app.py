@@ -37,13 +37,6 @@ st.markdown("""
         margin: 2px;
         font-size: 12px;
     }
-    .search-section {
-        background-color: #f8f9fa;
-        padding: 25px;
-        border-radius: 15px;
-        margin: 5px 0 10px 0;
-        border: 2px solid #e9ecef;
-    }
     .search-info {
         background-color: #d1ecf1;
         padding: 15px;
@@ -60,6 +53,14 @@ st.markdown("""
     }
     .element-container {
         margin-bottom: 0px;
+    }
+    /* Remove spacing around buttons */
+    .stButton {
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
+    }
+    div[data-testid="stButton"] {
+        margin-bottom: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
