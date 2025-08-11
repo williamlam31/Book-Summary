@@ -397,7 +397,7 @@ def main():
         app.hf_token = st.session_state.hf_token
     
     # Main search section
-    st.header("🔍 Find Your Perfect Book")
+    st.header("🔍 Find Your Book")
     
     # Create 2x2 grid for input fields
     col1, col2 = st.columns(2)
@@ -490,7 +490,7 @@ def main():
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     # Button to generate AI content for this book
-                    if st.button(f"🤖 Click Here for Summary and Discussion Questions '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
+                    if st.button(f"🤖 Click Here for Summary and Discussion Questions regarding'{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
                         with st.spinner("🧠 AI is reading and analyzing the book..."):
                             # Simulate AI processing time
                             time.sleep(1.5)
@@ -551,41 +551,6 @@ def main():
             st.write("• Checking spelling of author name or book title")
             st.write("• Using partial matches (e.g., just first name)")
     
-    # Welcome section (shown when no search has been performed)
-    elif not st.session_state.get('search_performed'):
-        st.markdown("""
-        ## Welcome to Your Virtual Book Club! 🌟
-        
-        **How to get started:**
-        
-        1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
-        2. ✍️ **Enter an author name** if you have someone specific in mind
-        3. 📚 **Add a book title** if you're looking for something particular
-        4. 🔍 **Click "Search for Books"** to discover amazing reads!
-        
-        Our AI will help you:
-        - 📚 **Discover** books matching your criteria
-        - 📝 **Generate** thoughtful summaries and analysis
-        - 💭 **Create** engaging discussion questions
-        - 🎯 **Provide** book club facilitation tips
-        
-        Perfect for book clubs, literature classes, or solo readers who want deeper insights!
-        
-        ### 🚀 Quick Examples to Try:
-        - **Genre:** Fantasy + **Author:** Brandon Sanderson
-        - **Genre:** Mystery + **Title:** Murder
-        - **Author:** Agatha Christie
-        - **Genre:** Science Fiction (browse popular sci-fi books)
-        """)
-    
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align: center; color: #666;'>
-    📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
-    <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
-    </div>
-    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
