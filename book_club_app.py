@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for better styling and removing white bars
+
 st.markdown("""
 <style>
 .book-card {
@@ -167,11 +167,11 @@ class BookClubApp:
         self.base_url = "https://openlibrary.org"
         self.search_url = "https://openlibrary.org/search.json"
         
-        # Hugging Face API configuration
+
         self.hf_api_url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
         self.hf_token = st.secrets.get("HUGGINGFACE_TOKEN", None) if hasattr(st, 'secrets') else None
         
-        # Fallback to environment variable or None
+
         if not self.hf_token:
             self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
 
@@ -182,7 +182,7 @@ class BookClubApp:
         
         try:
             headers = {"Authorization": f"Bearer {self.hf_token}"}
-            # Use a text generation model for better results
+
             api_url = "https://api-inference.huggingface.co/models/gpt2"
             
             payload = {
@@ -225,14 +225,14 @@ class BookClubApp:
     def search_books(self, genre: str = None, author: str = None, title: str = None, limit: int = 10) -> List[Dict]:
         """Search for books by genre, author, and/or title using Open Library API"""
         try:
-            # Build search parameters
+
             params = {
                 'limit': limit,
                 'has_fulltext': 'true',
                 'fields': 'key,title,author_name,first_publish_year,subject,isbn,cover_i,ratings_average,ratings_count'
             }
             
-            # Build search query based on inputs
+
             search_parts = []
             if title and title.strip():
                 search_parts.append(f'title:"{title.strip()}"')
@@ -260,13 +260,13 @@ class BookClubApp:
                 search_term = genre_mapping.get(genre, genre.lower())
                 search_parts.append(f'subject:"{search_term}"')
             
-            # If we have search parts, use 'q' parameter, otherwise use subject
+
             if search_parts:
                 params['q'] = ' AND '.join(search_parts)
             elif genre and genre != "Any Genre":
                 params['subject'] = genre_mapping.get(genre, genre.lower())
             else:
-                # Default search if no criteria provided
+
                 params['q'] = 'fiction'
             
             response = requests.get(self.search_url, params=params, timeout=10)
@@ -308,7 +308,7 @@ class BookClubApp:
         
         ai_response = self.call_huggingface_ai(prompt, max_length=250)
         
-        # Enhance the AI response with context
+
         if ai_response and len(ai_response) > 50:
             return f"'{book_title}' by {author_text} explores themes of {subjects_text}. {ai_response}"
         else:
@@ -325,7 +325,7 @@ class BookClubApp:
         author_text = authors[0] if authors else "the author"
         subject_text = subjects[0] if subjects else "life"
         
-        # Try AI generation for some questions
+
         ai_questions = []
         if self.hf_token:
             try:
@@ -338,7 +338,7 @@ class BookClubApp:
             except:
                 pass
         
-        # Base questions with variety
+
         base_questions = [
             f"What do you think {author_text} was trying to convey about {subject_text} in '{book_title}'?",
             f"How do the characters in '{book_title}' reflect real-world challenges and situations?",
@@ -351,12 +351,12 @@ class BookClubApp:
             "If you were to recommend this book to a friend, what would you tell them to expect?"
         ]
         
-        # Add subject-specific questions
+
         if subjects:
             for subject in subjects[:2]:
                 base_questions.append(f"How does '{book_title}' approach the topic of {subject} differently from other books you've read?")
         
-        # Combine AI and template questions
+
         all_questions = ai_questions + base_questions
         return random.sample(all_questions, min(8, len(all_questions)))
 
@@ -364,7 +364,7 @@ def main():
     st.title("📚 Virtual Book Club")
     st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
-    # AI capabilities section
+
     st.markdown("""
     Our AI will help you:
     - 📚 **Discover** books matching your criteria
@@ -373,7 +373,6 @@ def main():
     - 🎯 **Provide** book club facilitation tips
     """)
     
-    # Add HuggingFace token input in sidebar
     with st.sidebar:
         st.header("🤖 AI Configuration")
         hf_token = st.text_input(
@@ -385,11 +384,7 @@ def main():
             st.session_state.hf_token = hf_token
             st.success("✅ AI Token configured!")
         
-        st.markdown("---")
-        st.markdown("**Without token:** Basic AI responses")
-        st.markdown("**With token:** Enhanced AI summaries")
-        st.markdown("[Get free token here](https://huggingface.co/settings/tokens)")
-    
+
     app = BookClubApp()
     
     # Use token from sidebar if provided
