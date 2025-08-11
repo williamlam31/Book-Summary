@@ -37,6 +37,20 @@ st.markdown("""
         margin: 2px;
         font-size: 12px;
     }
+    .search-section {
+        background-color: #f8f9fa;
+        padding: 25px;
+        border-radius: 15px;
+        margin: 20px 0;
+        border: 2px solid #e9ecef;
+    }
+    .search-info {
+        background-color: #d1ecf1;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #bee5eb;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,33 +59,56 @@ class BookClubApp:
         self.base_url = "https://openlibrary.org"
         self.search_url = "https://openlibrary.org/search.json"
         
-    def search_books(self, genre: str, limit: int = 10) -> List[Dict]:
-        """Search for books by genre using Open Library API"""
+    def search_books(self, genre: str = None, author: str = None, title: str = None, limit: int = 10) -> List[Dict]:
+        """Search for books by genre, author, and/or title using Open Library API"""
         try:
-            # Map user-friendly genres to search terms
-            genre_mapping = {
-                "Fiction": "fiction",
-                "Mystery": "mystery",
-                "Romance": "romance", 
-                "Science Fiction": "science fiction",
-                "Fantasy": "fantasy",
-                "Biography": "biography",
-                "History": "history",
-                "Self-Help": "self help",
-                "Business": "business",
-                "Philosophy": "philosophy",
-                "Psychology": "psychology",
-                "Poetry": "poetry"
-            }
-            
-            search_term = genre_mapping.get(genre, genre.lower())
-            
+            # Build search parameters
             params = {
-                'subject': search_term,
                 'limit': limit,
                 'has_fulltext': 'true',
                 'fields': 'key,title,author_name,first_publish_year,subject,isbn,cover_i,ratings_average,ratings_count'
             }
+            
+            # Build search query based on inputs
+            search_parts = []
+            
+            if title and title.strip():
+                search_parts.append(f'title:"{title.strip()}"')
+                
+            if author and author.strip():
+                search_parts.append(f'author:"{author.strip()}"')
+            
+            if genre and genre != "Any Genre":
+                # Map user-friendly genres to search terms
+                genre_mapping = {
+                    "Fiction": "fiction",
+                    "Mystery": "mystery",
+                    "Romance": "romance", 
+                    "Science Fiction": "science fiction",
+                    "Fantasy": "fantasy",
+                    "Biography": "biography",
+                    "History": "history",
+                    "Self-Help": "self help",
+                    "Business": "business",
+                    "Philosophy": "philosophy",
+                    "Psychology": "psychology",
+                    "Poetry": "poetry",
+                    "Horror": "horror",
+                    "Thriller": "thriller",
+                    "Adventure": "adventure"
+                }
+                
+                search_term = genre_mapping.get(genre, genre.lower())
+                search_parts.append(f'subject:"{search_term}"')
+            
+            # If we have search parts, use 'q' parameter, otherwise use subject
+            if search_parts:
+                params['q'] = ' AND '.join(search_parts)
+            elif genre and genre != "Any Genre":
+                params['subject'] = genre_mapping.get(genre, genre.lower())
+            else:
+                # Default search if no criteria provided
+                params['q'] = 'fiction'
             
             response = requests.get(self.search_url, params=params, timeout=10)
             response.raise_for_status()
@@ -106,9 +143,6 @@ class BookClubApp:
     
     def generate_ai_summary(self, book_title: str, authors: List[str], subjects: List[str]) -> str:
         """Generate AI-powered book summary (simulated)"""
-        # This is a simulated AI response - in a real implementation, 
-        # you would integrate with an actual AI service like OpenAI, Anthropic, or local models
-        
         author_text = ", ".join(authors[:2])  # Limit to first 2 authors
         subjects_text = ", ".join(subjects[:3]) if subjects else "general literature"
         
@@ -157,147 +191,187 @@ def main():
     
     app = BookClubApp()
     
-    # Sidebar for genre selection
-    st.sidebar.header("📖 Book Discovery")
+    # Main search section
+    st.markdown('<div class="search-section">', unsafe_allow_html=True)
+    st.header("🔍 Find Your Perfect Book")
     
-    genres = [
-        "Fiction", "Mystery", "Romance", "Science Fiction", "Fantasy",
-        "Biography", "History", "Self-Help", "Business", "Philosophy",
-        "Psychology", "Poetry"
-    ]
+    # Create three columns for input fields
+    col1, col2, col3 = st.columns(3)
     
-    selected_genre = st.sidebar.selectbox("Choose a genre:", genres)
-    book_limit = st.sidebar.slider("Number of books to fetch:", 3, 15, 8)
+    with col1:
+        genres = [
+            "Any Genre", "Fiction", "Mystery", "Romance", "Science Fiction", 
+            "Fantasy", "Biography", "History", "Self-Help", "Business", 
+            "Philosophy", "Psychology", "Poetry", "Horror", "Thriller", "Adventure"
+        ]
+        selected_genre = st.selectbox("📖 Select Genre:", genres)
     
-    if st.sidebar.button("🔍 Discover Books", type="primary"):
-        with st.spinner("Searching for amazing books..."):
-            books = app.search_books(selected_genre, book_limit)
-            st.session_state.books = books
-            st.session_state.selected_genre = selected_genre
+    with col2:
+        author_name = st.text_input("✍️ Author Name (optional):", placeholder="e.g., Jane Austen, Stephen King")
     
-    # Display books if they exist in session state
-    if 'books' in st.session_state and st.session_state.books:
-        st.header(f"📚 {st.session_state.selected_genre} Books")
+    with col3:
+        book_title = st.text_input("📚 Book Title (optional):", placeholder="e.g., Pride and Prejudice")
+    
+    # Search controls
+    col_search, col_limit = st.columns([2, 1])
+    
+    with col_search:
+        search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
+    
+    with col_limit:
+        book_limit = st.selectbox("Results:", [5, 8, 10, 15], index=1)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Display search info
+    if author_name or book_title or selected_genre != "Any Genre":
+        search_criteria = []
+        if selected_genre != "Any Genre":
+            search_criteria.append(f"**Genre:** {selected_genre}")
+        if author_name:
+            search_criteria.append(f"**Author:** {author_name}")
+        if book_title:
+            search_criteria.append(f"**Title:** {book_title}")
         
-        for i, book in enumerate(st.session_state.books):
-            with st.container():
-                col1, col2 = st.columns([1, 3])
-                
-                with col1:
-                    # Display book cover
-                    cover_url = app.get_cover_url(book['cover_id'])
-                    if cover_url:
-                        try:
-                            st.image(cover_url, width=120)
-                        except:
-                            st.info("📖 No cover available")
-                    else:
-                        st.info("📖 No cover available")
-                
-                with col2:
-                    st.markdown(f"**{book['title']}**")
-                    st.write(f"*by {', '.join(book['authors'][:2])}*")
-                    
-                    if book['year']:
-                        st.write(f"📅 Published: {book['year']}")
-                    
-                    if book['rating']:
-                        st.write(f"⭐ Rating: {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
-                    
-                    # Display subjects as tags
-                    if book['subjects']:
-                        subjects_html = ""
-                        for subject in book['subjects'][:3]:
-                            subjects_html += f'<span class="genre-tag">{subject}</span>'
-                        st.markdown(subjects_html, unsafe_allow_html=True)
-                
-                # Button to generate AI content for this book
-                if st.button(f"🤖 Generate Book Club Content", key=f"btn_{i}"):
-                    with st.spinner("AI is reading and analyzing the book..."):
-                        # Simulate AI processing time
-                        time.sleep(1)
-                        
-                        # Generate AI summary
-                        summary = app.generate_ai_summary(
-                            book['title'], 
-                            book['authors'], 
-                            book['subjects']
-                        )
-                        
-                        # Generate discussion questions
-                        questions = app.generate_discussion_questions(
-                            book['title'], 
-                            book['authors'], 
-                            book['subjects']
-                        )
-                        
-                        # Display AI-generated content
-                        st.markdown('<div class="book-card">', unsafe_allow_html=True)
-                        st.subheader("📝 AI-Generated Summary")
-                        st.write(summary)
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        st.markdown('<div class="discussion-section">', unsafe_allow_html=True)
-                        st.subheader("💬 Discussion Questions")
-                        for j, question in enumerate(questions, 1):
-                            st.write(f"**{j}.** {question}")
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        # Reading recommendations
-                        st.subheader("🎯 Book Club Recommendations")
-                        st.write("**For Discussion Leaders:**")
-                        st.write("- Focus on questions 1-3 for initial discussion")
-                        st.write("- Use questions 4-6 for deeper analysis")
-                        st.write("- End with personal connection questions")
-                        
-                        st.write("**For Members:**")
-                        st.write("- Consider taking notes on key themes while reading")
-                        st.write("- Mark passages that resonate with you")
-                        st.write("- Think about how the book relates to current events")
-                
-                st.divider()
+        st.markdown('<div class="search-info">', unsafe_allow_html=True)
+        st.markdown(f"**🎯 Search Criteria:** {' | '.join(search_criteria)}")
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    else:
-        # Welcome message
+    # Handle search
+    if search_button:
+        if not any([selected_genre != "Any Genre", author_name.strip(), book_title.strip()]):
+            st.warning("⚠️ Please provide at least one search criterion (Genre, Author, or Title)")
+        else:
+            with st.spinner("🔍 Searching for books..."):
+                books = app.search_books(
+                    genre=selected_genre if selected_genre != "Any Genre" else None,
+                    author=author_name.strip() if author_name.strip() else None,
+                    title=book_title.strip() if book_title.strip() else None,
+                    limit=book_limit
+                )
+                st.session_state.books = books
+                st.session_state.search_performed = True
+    
+    # Display results
+    if 'books' in st.session_state and st.session_state.get('search_performed'):
+        if st.session_state.books:
+            st.header(f"📚 Found {len(st.session_state.books)} Books")
+            
+            for i, book in enumerate(st.session_state.books):
+                with st.container():
+                    col1, col2 = st.columns([1, 3])
+                    
+                    with col1:
+                        # Display book cover
+                        cover_url = app.get_cover_url(book['cover_id'])
+                        if cover_url:
+                            try:
+                                st.image(cover_url, width=120)
+                            except:
+                                st.info("📖 No cover available")
+                        else:
+                            st.info("📖 No cover available")
+                    
+                    with col2:
+                        st.markdown(f"**{book['title']}**")
+                        st.write(f"*by {', '.join(book['authors'][:2])}*")
+                        
+                        if book['year']:
+                            st.write(f"📅 Published: {book['year']}")
+                        
+                        if book['rating']:
+                            st.write(f"⭐ Rating: {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
+                        
+                        # Display subjects as tags
+                        if book['subjects']:
+                            subjects_html = ""
+                            for subject in book['subjects'][:3]:
+                                subjects_html += f'<span class="genre-tag">{subject}</span>'
+                            st.markdown(subjects_html, unsafe_allow_html=True)
+                    
+                    # Button to generate AI content for this book
+                    if st.button(f"🤖 Generate Book Club Content for '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
+                        with st.spinner("🧠 AI is reading and analyzing the book..."):
+                            # Simulate AI processing time
+                            time.sleep(1.5)
+                            
+                            # Generate AI summary
+                            summary = app.generate_ai_summary(
+                                book['title'], 
+                                book['authors'], 
+                                book['subjects']
+                            )
+                            
+                            # Generate discussion questions
+                            questions = app.generate_discussion_questions(
+                                book['title'], 
+                                book['authors'], 
+                                book['subjects']
+                            )
+                            
+                            # Display AI-generated content
+                            st.markdown('<div class="book-card">', unsafe_allow_html=True)
+                            st.subheader("📝 AI-Generated Summary")
+                            st.write(summary)
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            
+                            st.markdown('<div class="discussion-section">', unsafe_allow_html=True)
+                            st.subheader("💬 Discussion Questions")
+                            for j, question in enumerate(questions, 1):
+                                st.write(f"**{j}.** {question}")
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            
+                            # Reading recommendations
+                            st.subheader("🎯 Book Club Recommendations")
+                            
+                            rec_col1, rec_col2 = st.columns(2)
+                            
+                            with rec_col1:
+                                st.write("**📋 For Discussion Leaders:**")
+                                st.write("• Focus on questions 1-3 for initial discussion")
+                                st.write("• Use questions 4-6 for deeper analysis")
+                                st.write("• End with personal connection questions")
+                                st.write("• Allow 15-20 minutes per major theme")
+                            
+                            with rec_col2:
+                                st.write("**📖 For Members:**")
+                                st.write("• Take notes on key themes while reading")
+                                st.write("• Mark passages that resonate with you")
+                                st.write("• Consider how the book relates to current events")
+                                st.write("• Come prepared with your own questions")
+                    
+                    st.divider()
+        else:
+            st.warning("😔 No books found matching your criteria. Try:")
+            st.write("• Broadening your search (use 'Any Genre')")
+            st.write("• Checking spelling of author name or book title")
+            st.write("• Using partial matches (e.g., just first name)")
+    
+    # Welcome section (shown when no search has been performed)
+    elif not st.session_state.get('search_performed'):
         st.markdown("""
         ## Welcome to Your Virtual Book Club! 🌟
         
-        Get started by selecting a genre from the sidebar and clicking "Discover Books". 
-        Our AI will help you:
+        **How to get started:**
+        1. 📖 **Select a genre** from the dropdown above (or leave as "Any Genre")
+        2. ✍️ **Enter an author name** if you have someone specific in mind
+        3. 📚 **Add a book title** if you're looking for something particular
+        4. 🔍 **Click "Search for Books"** to discover amazing reads!
         
-        - 📚 **Discover** great books in your favorite genres
+        Our AI will help you:
+        - 📚 **Discover** books matching your criteria
         - 📝 **Generate** thoughtful summaries and analysis  
         - 💭 **Create** engaging discussion questions
         - 🎯 **Provide** book club facilitation tips
         
         Perfect for book clubs, literature classes, or solo readers who want deeper insights!
+        
+        ### 🚀 Quick Examples to Try:
+        - **Genre:** Fantasy + **Author:** Brandon Sanderson
+        - **Genre:** Mystery + **Title:** Murder
+        - **Author:** Agatha Christie
+        - **Genre:** Science Fiction (browse popular sci-fi books)
         """)
-        
-        # Show some sample genres as buttons for quick access
-        st.subheader("🚀 Quick Start - Try These Popular Genres:")
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            if st.button("🔍 Mystery"):
-                st.session_state.quick_genre = "Mystery"
-        with col2:
-            if st.button("🚀 Sci-Fi"):
-                st.session_state.quick_genre = "Science Fiction"
-        with col3:
-            if st.button("💝 Romance"):
-                st.session_state.quick_genre = "Romance"
-        with col4:
-            if st.button("📖 Fiction"):
-                st.session_state.quick_genre = "Fiction"
-        
-        # Handle quick genre selection
-        if 'quick_genre' in st.session_state:
-            with st.spinner(f"Searching for {st.session_state.quick_genre} books..."):
-                books = app.search_books(st.session_state.quick_genre, 6)
-                st.session_state.books = books
-                st.session_state.selected_genre = st.session_state.quick_genre
-                del st.session_state.quick_genre
-                st.rerun()
     
     # Footer
     st.markdown("---")
@@ -310,4 +384,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
