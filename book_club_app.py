@@ -5,6 +5,7 @@ import time
 import random
 from typing import Dict, List, Optional
 
+# Configure Streamlit page
 st.set_page_config(
     page_title="Virtual Book Club",
     page_icon="📚",
@@ -14,6 +15,13 @@ st.set_page_config(
 # Custom CSS for better styling
 st.markdown("""
 <style>
+    .book-card {
+        background-color: #f0f2f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 10px 0;
+        border-left: 5px solid #4CAF50;
+    }
     .discussion-section {
         background-color: #e8f4fd;
         padding: 15px;
@@ -179,7 +187,7 @@ class BookClubApp:
 
 def main():
     st.title("📚 Virtual Book Club")
-    st.markdown("*Powered by Open Library API*")
+    st.markdown("*Discover books, get AI-generated summaries, and spark meaningful discussions!*")
     
     app = BookClubApp()
     
@@ -187,8 +195,8 @@ def main():
     st.markdown('<div class="search-section">', unsafe_allow_html=True)
     st.header("🔍 Find Your Perfect Book")
     
-    # Create three columns for input fields
-    col1, col2, col3 = st.columns(3)
+    # Create 2x2 grid for input fields
+    col1, col2 = st.columns(2)
     
     with col1:
         genres = [
@@ -199,19 +207,19 @@ def main():
         selected_genre = st.selectbox("📖 Select Genre:", genres)
     
     with col2:
-        author_name = st.text_input("✍️ Author Name (optional):", placeholder="e.g., Jane Austen, Stephen King")
+        book_limit = st.selectbox("📊 Number of Results:", [5, 8, 10, 15], index=1)
+    
+    # Second row
+    col3, col4 = st.columns(2)
     
     with col3:
+        author_name = st.text_input("✍️ Author Name (optional):", placeholder="e.g., Jane Austen, Stephen King")
+    
+    with col4:
         book_title = st.text_input("📚 Book Title (optional):", placeholder="e.g., Pride and Prejudice")
     
-    # Search controls
-    col_search, col_limit = st.columns([2, 1])
-    
-    with col_search:
-        search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
-    
-    with col_limit:
-        book_limit = st.selectbox("Results:", [5, 8, 10, 15], index=1)
+    # Search button below the 2x2 grid
+    search_button = st.button("🔍 Search for Books", type="primary", use_container_width=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -364,6 +372,15 @@ def main():
         - **Author:** Agatha Christie
         - **Genre:** Science Fiction (browse popular sci-fi books)
         """)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: #666;'>
+        📚 Virtual Book Club | Powered by Open Library API & AI ✨<br>
+        <small>Data sourced from <a href='https://openlibrary.org'>Open Library</a></small>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
