@@ -482,7 +482,7 @@ def main():
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     # Button to generate AI content for this book
-                    if st.button(f"🤖 Click Here for Summary and Discussion Questions '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
+                    if st.button(f"🤖 Click Here for Summary and Discussion Questions regarding '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
                         with st.spinner("🧠 AI is reading and analyzing the book..."):
                             # Simulate AI processing time
                             time.sleep(1.5)
