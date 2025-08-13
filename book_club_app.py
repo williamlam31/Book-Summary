@@ -109,14 +109,14 @@ def make_questions(title, authors, subjects, k=5):
     text = call_llm(prompt)
     if not text:
         return []
-    # Normalize and split
+ 
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out = []
     for l in lines:
         low = l.lower()
         if low.startswith("here are") or low.startswith("here's") or low.startswith("the following") or low.startswith("below are"):
             continue
-        # Remove leading numbering/symbols like "1.", "1)", "- ", ") "
+
         while l and (l[0].isdigit() or l[0] in "-.)"):
             l = l[1:].lstrip()
         l = l.strip(" -•").strip()
