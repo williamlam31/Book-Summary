@@ -1,3 +1,4 @@
+
 import requests
 import streamlit as st
 
@@ -6,7 +7,7 @@ st.set_page_config(page_title="📚 Virtual Book Club (Q2)", page_icon="📚", l
 
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
-# Hugging Face API config (strictly HTTP API)
+# ---------------- Serverless Hugging Face Inference API ----------------
 HF_API_KEY = st.secrets.get("hf_api_key", "")
 # sanitize model id from secrets: trim spaces and stray quotes
 HF_MODEL = (st.secrets.get("hf_model", "meta-llama/Meta-Llama-3-8B-Instruct") or "").strip().strip('"').strip("'")
@@ -15,8 +16,8 @@ HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 # ---------------- Helpers ----------------
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
-    Verbose call to Hugging Face Inference API.
-    Surfaces status code, raw text, and common errors directly in the Streamlit app.
+    Call the Hugging Face *serverless* Inference API for text-generation models.
+    Includes a debug panel and clear error handling (404/loading/unexpected shapes).
     """
     if not HF_API_KEY:
         st.error("No Hugging Face API key found in secrets (hf_api_key).")
@@ -37,9 +38,9 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
     try:
         r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
 
-        # Always show minimal debug (collapsible)
+        # Debug panel
         with st.expander("Hugging Face API debug", expanded=False):
-            st.code(f"Status: {r.status_code}\nURL: {HF_API_URL}", language="bash")
+            st.code(f"Status: {r.status_code}\\nURL: {HF_API_URL}", language="bash")
             try:
                 text_preview = r.text[:2000] + ("..." if len(r.text) > 2000 else "")
                 st.code(text_preview, language="json")
@@ -161,15 +162,16 @@ def make_questions(title, authors, subjects, k=5):
     return out
 
 # ---------------- UI ----------------
-st.title("📚 Virtual Book Club (Q2 — Simple)")
+st.title("📚 Virtual Book Club (Q2 — Serverless HF)")
 
 with st.sidebar:
-    st.markdown("### Hugging Face API")
+    st.markdown("### Hugging Face API (Serverless)")
     if HF_API_KEY:
         st.success("API key found in secrets ✅")
     else:
         st.error("No `hf_api_key` found in Streamlit secrets.")
-    st.caption(f"Model: {HF_MODEL}")
+    st.caption(f"Model: {HF_MODEL or '(not set)'}")
+    st.caption("Using Serverless Inference API")
     st.divider()
     if st.button("▶️ Test Hugging Face API"):
         test_text = call_hf("Say 'hello' in one short friendly sentence.", max_new_tokens=16, temperature=0.2)
