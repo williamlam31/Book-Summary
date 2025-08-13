@@ -37,6 +37,15 @@ HF_API_KEY = (st.secrets.get("hf_api_key") or st.secrets.get("hf_token") or os.e
 HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-base") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
+# --- Debug: show masked token & model once ---
+try:
+    st.sidebar.caption(f"HF model: {HF_MODEL}")
+    st.sidebar.caption(f"HF token: {_mask_token(HF_API_KEY)}")
+except Exception:
+    pass
+# --------------------------------------------
+
+
 # Models to try automatically if the chosen model returns 404 on serverless HF Inference
 FALLBACK_MODELS = [
     "google/gemma-2b-it",
