@@ -25,9 +25,8 @@ HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
-    Call the Hugging Face *serverless* Inference API for text-generation models.
-    Includes a debug panel and clear error handling (404/loading/unexpected shapes).
-    Will optionally fallback to a small set of public models if 404 is returned.
+    Call the Hugging Face Inference API for text2text models (e.g., FLAN-T5).
+    Returns a string ("" on error). Shows helpful errors in Streamlit.
     """
     if not HF_API_KEY:
         st.error("No Hugging Face API key found in secrets (hf_api_key).")
@@ -37,16 +36,39 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         return ""
 
     headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",
         "x-wait-for-model": "true",
+        "x-use-cache": "true",
     }
     payload = {
         "inputs": prompt,
         "parameters": {
             "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
+            "temperature": float(temperature),
             "return_full_text": False,
         }
     }
+
+    try:
+        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
+        if r.status_code == 503:
+            st.warning("Model is loading on Hugging Face… please try again.")
+            return ""
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        st.error(f"Hugging Face request failed: {e}")
+        return ""
+
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        return (data[0].get("generated_text") or "").strip()
+
+    if isinstance(data, dict) and data.get("error"):
+        st.error(f"Hugging Face error: {data['error']}")
+        return ""
+
+    st.write("Unexpected HF response:", data)
+    return ""
 
 def search_books(genre=None, author=None, title=None, limit=5):
     params = {"limit": limit, "has_fulltext": "true"}
@@ -115,6 +137,15 @@ def make_questions(title, authors, subjects, k=5):
     return out
 
 st.title("Virtual Book Club")
+
+# --- Debug expander: shows model + whether HF key is present (masked) ---
+with st.expander("⚙️ Debug: Model & API status", expanded=False):
+    st.write({
+        "HF_MODEL": HF_MODEL,
+        "HF_API_URL": HF_API_URL,
+        "HF_API_KEY_present": bool(HF_API_KEY),
+        "HF_API_KEY_masked": _mask_token(HF_API_KEY),
+    })
 
 
 st.header("Find Books")
