@@ -8,7 +8,8 @@ OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 # Hugging Face API config (strictly HTTP API)
 HF_API_KEY = st.secrets.get("hf_api_key", "")
-HF_MODEL = st.secrets.get("hf_model", "meta-llama/Meta-Llama-3-8B-Instruct")
+# sanitize model id from secrets: trim spaces and stray quotes
+HF_MODEL = (st.secrets.get("hf_model", "meta-llama/Meta-Llama-3-8B-Instruct") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 # ---------------- Helpers ----------------
@@ -20,6 +21,10 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
     if not HF_API_KEY:
         st.error("No Hugging Face API key found in secrets (hf_api_key).")
         return ""
+    if not HF_MODEL:
+        st.error("No Hugging Face model set (hf_model).")
+        return ""
+
     headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     payload = {
         "inputs": prompt,
@@ -40,6 +45,14 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
                 st.code(text_preview, language="json")
             except Exception:
                 st.write("Non-text response.")
+
+        # Specific 404 handling (common when model ID is wrong or token lacks access)
+        if r.status_code == 404:
+            st.error(
+                f"HF 404: Model '{HF_MODEL}' not found or not accessible to this token. "
+                "Check the exact repo ID (case-sensitive), remove quotes/spaces in secrets, or accept the model’s terms."
+            )
+            return ""
 
         if not r.ok:
             st.error(f"HF API HTTP error: {r.status_code}")
