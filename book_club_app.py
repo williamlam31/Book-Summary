@@ -176,7 +176,6 @@ class BookClubApp:
             self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
 
     def call_huggingface_ai(self, prompt: str, max_length: int = 200) -> str:
-        """Call Hugging Face API for AI text generation"""
         if not self.hf_token:
             return self._fallback_ai_response(prompt)
         
@@ -208,7 +207,6 @@ class BookClubApp:
                 else:
                     return self._fallback_ai_response(prompt)
             else:
-                # If API fails, fall back to template-based response
                 return self._fallback_ai_response(prompt)
                 
         except Exception as e:
@@ -216,7 +214,6 @@ class BookClubApp:
             return self._fallback_ai_response(prompt)
 
     def _fallback_ai_response(self, prompt: str) -> str:
-        """Fallback response when AI API is unavailable"""
         if "summary" in prompt.lower():
             return "This book offers readers a compelling narrative that explores deep themes and human experiences. The author weaves together engaging characters and thought-provoking scenarios that challenge readers to examine important life questions. Through masterful storytelling, this work provides both entertainment and insight into the human condition."
         else:
@@ -239,7 +236,6 @@ class BookClubApp:
             if author and author.strip():
                 search_parts.append(f'author:"{author.strip()}"')
             if genre and genre != "Any Genre":
-                # Map user-friendly genres to search terms
                 genre_mapping = {
                     "Fiction": "fiction",
                     "Mystery": "mystery",
@@ -372,10 +368,10 @@ def main():
     
     app = BookClubApp()
     
-    # Main search section
+
     st.header("Find Your Book(s)")
     
-    # Create 2x2 grid for input fields
+
     col1, col2 = st.columns(2)
     
     with col1:
@@ -387,9 +383,9 @@ def main():
         selected_genre = st.selectbox("Genre:", genres)
     
     with col2:
-        book_limit = st.selectbox("Number of Results:", [5, 8, 10, 15], index=1)
+        book_limit = st.slider("Number of Results:", min_value=1, max_value=10, value=5, step=1)
     
-    # Second row
+    
     col3, col4 = st.columns(2)
     
     with col3:
@@ -414,7 +410,7 @@ def main():
         st.markdown('<div class="search-info">', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Handle search
+
     if search_button:
         if not any([selected_genre != "Any Genre", author_name.strip(), book_title.strip()]):
             st.warning("⚠️ Please provide at least one search criterion (Genre, Author, or Title)")
@@ -449,8 +445,8 @@ def main():
                         st.info("📖 No cover available")
                 
                 with col2:
-                    st.markdown(f"**{book['title']}**")
-                    st.write(f"*by {', '.join(book['authors'][:2])}*")
+                    st.markdown(f"**{book['title']}** — *{', '.join(book['authors'][:2])}*")
+                    # (author shown next to title)
                     
                     if book['year']:
                         st.write(f"📅 Published: {book['year']}")
@@ -466,15 +462,13 @@ def main():
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     
-            # Always show AI-generated content without a button
-            # Always show AI-generated content without a button
+
             with st.spinner("🧠 Generating summary and questions..."):
                 time.sleep(0.05)
                 summary = app.generate_ai_summary(book['title'], book['authors'], book['subjects'])
                 questions = app.generate_discussion_questions(book['title'], book['authors'], book['subjects'])[:5]
 
-            # Display AI-generated content
-            # Display AI-generated content
+
             st.subheader("🤖 Summary")
             if app.hf_token:
                 st.info("✨ Enhanced by Hugging Face AI (server-side)")
