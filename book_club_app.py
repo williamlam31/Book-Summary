@@ -510,12 +510,11 @@ with rec_col2:
 
 st.divider()
 
-        
-        else:
-            st.warning("😔 No books found matching your criteria. Try:")
-            st.write("• Broadening your search (use 'Any Genre')")
-            st.write("• Checking spelling of author name or book title")
-            st.write("• Using partial matches (e.g., just first name)")
+    else:
+        st.warning("😔 No books found matching your criteria. Try:")
+        st.write("• Broadening your search (use 'Any Genre')")
+        st.write("• Checking spelling of author name or book title")
+        st.write("• Using partial matches (e.g., just first name)")
     
 
 if __name__ == "__main__":
