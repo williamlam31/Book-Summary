@@ -14,7 +14,7 @@ HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 # Models to try automatically if the chosen model returns 404 on serverless HF Inference
 FALLBACK_MODELS = [
-    "google/gemma-2b-it",
+    "google/flan-t5-base",
     "HuggingFaceH4/zephyr-7b-beta",
     "tiiuae/falcon-7b-instruct",
 ]
