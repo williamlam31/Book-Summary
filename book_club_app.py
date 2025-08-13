@@ -5,10 +5,34 @@ import streamlit as st
 # ---------------- Basic Config ----------------
 st.set_page_config(page_title="📚 Virtual Book Club (Q2)", page_icon="📚", layout="wide")
 
+def _mask_token(tok: str) -> str:
+    if not tok:
+        return "(missing)"
+    tok = tok.strip()
+    if len(tok) <= 10:
+        return tok[:2] + "…" + tok[-2:]
+    return tok[:4] + "…" + tok[-4:]
+
+def _validate_hf_token(tok: str) -> tuple[bool, str]:
+    """
+    Returns (is_valid, message). We don't send the token anywhere; just local checks.
+    """
+    if not tok:
+        return False, "No token found. Set 'hf_api_key' in secrets or env HF_API_KEY."
+    t = tok.strip()
+    if not t.startswith("hf_"):
+        return False, "Token should start with 'hf_'. Copy a personal access token from Hugging Face settings."
+    if len(t) < 20:
+        return False, "Token looks too short."
+    if any(ch in t for ch in ['"', "'", " "]):
+        return False, "Token contains quotes or spaces. Paste it without quotes or spaces."
+    return True, "OK"
+
+
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 # ---------------- Serverless Hugging Face Inference API ----------------
-HF_API_KEY = st.secrets.get("hf_api_key") or st.secrets.get("hf_token") or os.environ.get("HF_API_KEY") or os.environ.get("HF_TOKEN")
+HF_API_KEY = (st.secrets.get("hf_api_key") or st.secrets.get("hf_token") or os.environ.get("HF_API_KEY") or os.environ.get("HF_TOKEN") or "").strip()
 # sanitize model id from secrets: trim spaces and stray quotes
 HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-large") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
