@@ -15,17 +15,13 @@ def _mask_token(tok: str) -> str:
         return tok[:2] + "…" + tok[-2:]
     return tok[:4] + "…" + tok[-4:]
 
-
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 GROQ_API_KEY = (st.secrets.get("groq_api_key") or os.environ.get("GROQ_API_KEY") or "").strip()
 GROQ_MODEL = (st.secrets.get("groq_model", "llama3-70b-8192") or "").strip().strip('"').strip("'")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-
-
 def call_llm(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
-
     if not GROQ_API_KEY:
         st.error("No Groq API key found in secrets (groq_api_key).")
         return ""
@@ -96,8 +92,6 @@ def make_summary(title, authors, subjects):
     )
     return call_llm(prompt)
 
-
-
 def make_questions(title, authors, subjects, k=5):
     author_txt = ", ".join(authors[:2]) if authors else "Unknown"
     topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
@@ -109,14 +103,14 @@ def make_questions(title, authors, subjects, k=5):
     text = call_llm(prompt)
     if not text:
         return []
- 
+
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out = []
     for l in lines:
         low = l.lower()
         if low.startswith("here are") or low.startswith("here's") or low.startswith("the following") or low.startswith("below are"):
             continue
-
+            
         while l and (l[0].isdigit() or l[0] in "-.)"):
             l = l[1:].lstrip()
         l = l.strip(" -•").strip()
@@ -140,7 +134,7 @@ with c1:
         index=0,
     )
 with c2:
-    limit = st.slider("Number of results", 1, 8, 5)
+    limit = st.selectbox("Number of results", list(range(1, 11)), index=4)
 
 c3, c4 = st.columns(2)
 with c3:
