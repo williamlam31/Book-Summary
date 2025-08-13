@@ -9,6 +9,7 @@ st.set_page_config(page_title="Virtual Book Club (Simple)", layout="wide")
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 def get_token():
+
     return (st.secrets.get("HUGGINGFACE_TOKEN", "") if hasattr(st, "secrets") else "") or os.getenv("HUGGINGFACE_TOKEN", "")
 
 def call_hf(prompt, max_length=220):
@@ -24,7 +25,7 @@ def call_hf(prompt, max_length=220):
         )
         if r.ok and isinstance(r.json(), list) and r.json():
             text = r.json()[0].get("generated_text", "")
-            
+      
             if text.startswith(prompt):
                 text = text[len(prompt):]
             return text.strip() or fallback_text(prompt)
@@ -33,7 +34,8 @@ def call_hf(prompt, max_length=220):
     return fallback_text(prompt)
 
 def fallback_text(prompt):
-   
+    return ""
+
     title = "this book"
     if "'" in prompt:
         try:
@@ -104,16 +106,11 @@ def make_summary(title, authors, subjects, work_key=None):
     topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
     prompt = f"Write a short, clear summary for '{title}' by {author_txt} about {topic_txt}. Summary:"
     text = call_hf(prompt, max_length=220)
-
+    if text:
+        return text.strip()
+    # Fallback to Open Library description if HF returns nothing
     desc = fetch_openlib_description(work_key) if work_key else ""
-    if desc:
-        return desc.strip()
-
-    author_txt = ", ".join(authors[:2]) if authors else "Unknown"
-    topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
-    prompt = f"Write a short, clear summary for '{title}' by {author_txt} about {topic_txt}. Summary:"
-    text = call_hf(prompt, max_length=220)
-    return text.strip() if text else ""
+    return desc.strip() if desc else ""
 
 def make_questions(title, authors, subjects, k=5):
     base = [
@@ -128,7 +125,6 @@ def make_questions(title, authors, subjects, k=5):
         base.append(f"How does '{title}' handle the topic of {s}?")
     random.shuffle(base)
     return base[:k]
-
 
 st.title("📚 Virtual Book Club (Simple)")
 
@@ -172,23 +168,22 @@ if st.session_state.get("search_performed") and st.session_state.get("books"):
             if book["subjects"]: st.write(", ".join(book["subjects"][:3]))
 
         with right:
-            # unique key ensures summary/questions are *per book*
             key = f"{book['title']}|{book['authors'][0] if book['authors'] else 'Unknown'}|{book.get('year')}|{book.get('cover_id')}"
             if key not in st.session_state.ai_cache:
-                with st.spinner("🧠 Thinking..."):
+                with st.spinner("Thinking..."):
                     time.sleep(0.05)
                     s = make_summary(book["title"], book["authors"], book["subjects"], work_key=book.get("work_key"))
                     q = make_questions(book["title"], book["authors"], book["subjects"], k=5)
                     st.session_state.ai_cache[key] = (s, q)
 
             summary, questions = st.session_state.ai_cache[key]
-            st.subheader("🤖 Summary")
+            st.subheader("Summary")
             if summary:
                 st.write(summary)
             else:
                 st.info("No summary available from Open Library or AI for this title.")
 
-            st.subheader("💬 Discussion Questions")
+            st.subheader("Discussion Questions")
             for i, q in enumerate(questions, 1):
                 st.write(f"{i}. {q}")
 
