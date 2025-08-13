@@ -25,7 +25,7 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 def call_llm(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
-    # Groq OpenAI-compatible Chat Completions
+
     if not GROQ_API_KEY:
         st.error("No Groq API key found in secrets (groq_api_key).")
         return ""
@@ -167,8 +167,16 @@ if books:
                 qs = make_questions(b["title"], b["authors"], b["subjects"], k=5)
 
             st.markdown("**Summary**")
+            if summary:
+                st.write(summary)
+            else:
+                st.info("No summary available.")
 
             st.markdown("**Discussion Questions**")
+            if qs:
+                st.markdown("\n".join([f"{i+1}. {q}" for i, q in enumerate(qs)]))
+            else:
+                st.info("No questions available.")
 
 
         st.divider()
