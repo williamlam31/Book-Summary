@@ -96,22 +96,30 @@ def make_summary(title, authors, subjects):
     )
     return call_llm(prompt)
 
+
+
 def make_questions(title, authors, subjects, k=5):
     author_txt = ", ".join(authors[:2]) if authors else "Unknown"
     topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
     prompt = (
-        f"Create {k} concise book club discussion questions about '{title}' by {author_txt}. "
+        f"List exactly {k} concise book club discussion questions about '{title}' by {author_txt}. "
         f"Consider these topics: {topic_txt}. "
-        f"Return only a numbered list 1-{k}, one per line."
+        f"Return ONLY the questions in numbered format (1., 2., etc.) with no extra text, no introduction, no closing."
     )
     text = call_llm(prompt)
     if not text:
         return []
+    # Normalize and split
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out = []
     for l in lines:
+        low = l.lower()
+        if low.startswith("here are") or low.startswith("here's") or low.startswith("the following") or low.startswith("below are"):
+            continue
+        # Remove leading numbering/symbols like "1.", "1)", "- ", ") "
         while l and (l[0].isdigit() or l[0] in "-.)"):
             l = l[1:].lstrip()
+        l = l.strip(" -•").strip()
         if l and l not in out:
             out.append(l)
         if len(out) == k:
