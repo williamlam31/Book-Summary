@@ -1,4 +1,3 @@
-
 import requests
 import streamlit as st
 
@@ -15,10 +14,11 @@ HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 # ---------------- Helpers ----------------
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
-    Minimal call to Hugging Face Inference API using requests.
-    Expects a text-generation capable model. Returns empty string on failure.
+    Verbose call to Hugging Face Inference API.
+    Surfaces status code, raw text, and common errors directly in the Streamlit app.
     """
     if not HF_API_KEY:
+        st.error("No Hugging Face API key found in secrets (hf_api_key).")
         return ""
     headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     payload = {
@@ -30,21 +30,55 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         }
     }
     try:
-        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
+        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
+
+        # Always show minimal debug (collapsible)
+        with st.expander("Hugging Face API debug", expanded=False):
+            st.code(f"Status: {r.status_code}\nURL: {HF_API_URL}", language="bash")
+            try:
+                text_preview = r.text[:2000] + ("..." if len(r.text) > 2000 else "")
+                st.code(text_preview, language="json")
+            except Exception:
+                st.write("Non-text response.")
+
         if not r.ok:
+            st.error(f"HF API HTTP error: {r.status_code}")
+            # Try to show JSON error if available
+            try:
+                err = r.json()
+                if isinstance(err, dict) and "error" in err:
+                    st.error(f"HF error: {err.get('error')}")
+            except Exception:
+                pass
             return ""
-        data = r.json()
-        # Handle common HF response shapes
+
+        # Parse JSON
+        try:
+            data = r.json()
+        except Exception as e:
+            st.error(f"Failed to parse HF JSON: {e}")
+            return ""
+
+        # Handle common HF "loading" error
+        if isinstance(data, dict) and "error" in data:
+            msg = str(data.get("error"))
+            if "loading" in msg.lower():
+                st.warning("The HF model is loading. Please try again shortly or switch to a smaller model via secrets.")
+            else:
+                st.error(f"HF API error: {msg}")
+            return ""
+
+        # Typical text-generation shape
         if isinstance(data, list) and data and isinstance(data[0], dict):
-            # Classic text-generation pipeline shape
             return (data[0].get("generated_text") or "").strip()
         if isinstance(data, dict) and "generated_text" in data:
             return (data.get("generated_text") or "").strip()
-        if isinstance(data, dict) and "error" in data:
-            return ""
-    except Exception:
-        pass
-    return ""
+
+        st.warning("HF API returned an unexpected shape. Check the debug panel for details.")
+        return ""
+    except Exception as e:
+        st.error(f"Hugging Face request failed: {e}")
+        return ""
 
 def search_books(genre=None, author=None, title=None, limit=5):
     params = {"limit": limit, "has_fulltext": "true"}
@@ -105,7 +139,6 @@ def make_questions(title, authors, subjects, k=5):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out = []
     for l in lines:
-        # remove any leading numbers/bullets
         while l and (l[0].isdigit() or l[0] in "-.)"):
             l = l[1:].lstrip()
         if l and l not in out:
@@ -124,6 +157,13 @@ with st.sidebar:
     else:
         st.error("No `hf_api_key` found in Streamlit secrets.")
     st.caption(f"Model: {HF_MODEL}")
+    st.divider()
+    if st.button("▶️ Test Hugging Face API"):
+        test_text = call_hf("Say 'hello' in one short friendly sentence.", max_new_tokens=16, temperature=0.2)
+        if test_text:
+            st.success(f"HF OK: {test_text}")
+        else:
+            st.error("HF call returned empty. See the debug panel below for details.")
 
 st.header("Find Books")
 c1, c2 = st.columns(2)
@@ -173,14 +213,14 @@ if books:
                 qs = make_questions(b["title"], b["authors"], b["subjects"], k=5)
 
             st.markdown("**Summary**")
-            st.write(summary or "No summary returned (check API key/model).")
+            st.write(summary or "No summary returned. Check the HF debug panel above.")
 
             st.markdown("**Discussion Questions**")
             if qs:
                 for i, q in enumerate(qs, 1):
                     st.write(f"{i}. {q}")
             else:
-                st.write("No questions returned (check API key/model).")
+                st.write("No questions returned. Check the HF debug panel above.")
 
         st.divider()
 else:
