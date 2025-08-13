@@ -449,7 +449,8 @@ def main():
                         st.info("📖 No cover available")
                 
                 with col2:
-                    st.markdown(f"**{book['title']}** — *{', '.join(book['authors'][:2])}*")
+                    st.markdown(f"**{book['title']}**")
+                    st.write(f"*by {', '.join(book['authors'][:2])}*")
                     
                     if book['year']:
                         st.write(f"📅 Published: {book['year']}")
@@ -465,56 +466,32 @@ def main():
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     
-# Always show AI-generated content without a button
-with st.spinner("🧠 Generating summary and questions..."):
-    time.sleep(0.1)  # tiny pause to keep UI responsive if many results
-    
-    summary = app.generate_ai_summary(
-        book['title'],
-        book['authors'],
-        book['subjects']
-    )
-    questions = app.generate_discussion_questions(book['title'], book['authors'], book['subjects'])[:5]
+            # Always show AI-generated content without a button
+            # Always show AI-generated content without a button
+            with st.spinner("🧠 Generating summary and questions..."):
+                time.sleep(0.05)
+                summary = app.generate_ai_summary(book['title'], book['authors'], book['subjects'])
+                questions = app.generate_discussion_questions(book['title'], book['authors'], book['subjects'])[:5]
 
-# Display AI-generated content
-st.markdown('<div class="book-card">', unsafe_allow_html=True)
-st.subheader("🤖 Summary")
-if app.hf_token:
-    st.info("✨ Enhanced by Hugging Face AI (server-side)")
-else:
-    st.info("💡 Using built-in fallback (set HUGGINGFACE_TOKEN on server to enable AI)")
-st.write(summary)
-st.markdown('</div>', unsafe_allow_html=True)
+            # Display AI-generated content
+            # Display AI-generated content
+            st.subheader("🤖 Summary")
+            if app.hf_token:
+                st.info("✨ Enhanced by Hugging Face AI (server-side)")
+            else:
+                st.info("💡 Using built-in fallback (set HUGGINGFACE_TOKEN on server to enable AI)")
+            st.write(summary)
 
-st.markdown('<div class="discussion-section">', unsafe_allow_html=True)
-st.subheader("💬 Discussion Questions")
-for j, question in enumerate(questions, 1):
-    st.write(f"**{j}.** {question}")
-st.markdown('</div>', unsafe_allow_html=True)
+            st.subheader("💬 Discussion Questions")
+            for j, q in enumerate(questions, 1):
+                st.write(f"{j}. {q}")
 
-# Reading recommendations
-st.subheader("🎯 Book Club Recommendations")
-rec_col1, rec_col2 = st.columns(2)
-with rec_col1:
-    st.write("**📋 For Discussion Leaders:**")
-    st.write("• Focus on questions 1-3 for initial discussion")
-    st.write("• Use questions 4-6 for deeper analysis")
-    st.write("• End with personal connection questions")
-    st.write("• Allow 15-20 minutes per major theme")
-with rec_col2:
-    st.write("**📖 For Members:**")
-    st.write("• Take notes on key themes while reading")
-    st.write("• Mark passages that resonate with you")
-    st.write("• Consider how the book relates to current events")
-    st.write("• Come prepared with your own questions")
-
-st.divider()
-
-    else:
-        st.warning("😔 No books found matching your criteria. Try:")
-        st.write("• Broadening your search (use 'Any Genre')")
-        st.write("• Checking spelling of author name or book title")
-        st.write("• Using partial matches (e.g., just first name)")
+            st.divider()
+        else:
+            st.warning("😔 No books found matching your criteria. Try:")
+            st.write("• Broadening your search (use 'Any Genre')")
+            st.write("• Checking spelling of author name or book title")
+            st.write("• Using partial matches (e.g., just first name)")
     
 
 if __name__ == "__main__":
