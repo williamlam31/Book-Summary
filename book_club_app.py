@@ -167,8 +167,6 @@ if books:
                 st.image(cover_url(b["cover_id"]), width=130)
             st.markdown(f"**{b['title']}**")
             st.caption(", ".join(b["authors"][:2]))
-            if b.get("year"):
-                st.write(f"📅 {b['year']}")
             if b.get("subjects"):
                 st.write(", ".join(b["subjects"][:3]))
 
