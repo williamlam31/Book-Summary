@@ -5,8 +5,7 @@ import subprocess
 import os
 import streamlit as st
 
-# ---------------- Basic Config ----------------
-st.set_page_config(page_title="📚 Virtual Book Club (Q2)", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Virtual Book Club", layout="wide")
 
 def _mask_token(tok: str) -> str:
     if not tok:
@@ -16,31 +15,13 @@ def _mask_token(tok: str) -> str:
         return tok[:2] + "…" + tok[-2:]
     return tok[:4] + "…" + tok[-4:]
 
-def _validate_hf_token(tok: str) -> tuple[bool, str]:
-    """
-    Returns (is_valid, message). We don't send the token anywhere; just local checks.
-    """
-    if not tok:
-        return False, "No token found. Set 'hf_api_key' in secrets or env HF_API_KEY."
-    t = tok.strip()
-    if not t.startswith("hf_"):
-        return False, "Token should start with 'hf_'. Copy a personal access token from Hugging Face settings."
-    if len(t) < 20:
-        return False, "Token looks too short."
-    if any(ch in t for ch in ['"', "'", " "]):
-        return False, "Token contains quotes or spaces. Paste it without quotes or spaces."
-    return True, "OK"
-
 
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
-# ---------------- Serverless Hugging Face Inference API ----------------
 HF_API_KEY = (st.secrets.get("hf_api_key") or st.secrets.get("hf_token") or os.environ.get("HF_API_KEY") or os.environ.get("HF_TOKEN") or "").strip()
-# sanitize model id from secrets: trim spaces and stray quotes
 HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-base") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
-# --- Debug: show masked token & model once ---
 try:
     st.sidebar.caption(f"HF model: {HF_MODEL}")
     st.sidebar.caption(f"HF token: {_mask_token(HF_API_KEY)}")
@@ -49,14 +30,12 @@ except Exception:
 # --------------------------------------------
 
 
-# Models to try automatically if the chosen model returns 404 on serverless HF Inference
 FALLBACK_MODELS = [
     "google/gemma-2b-it",
     "HuggingFaceH4/zephyr-7b-beta",
     "tiiuae/falcon-7b-instruct",
 ]
 
-# ---------------- Helpers ----------------
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
     Call the Hugging Face *serverless* Inference API for text-generation models.
@@ -71,8 +50,6 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         return ""
 
     headers = {
-    # (moved into call_hf)
-        # Ask serverless to wait for cold model start rather than returning 'loading'
         "x-wait-for-model": "true",
     }
     payload = {
@@ -83,99 +60,6 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
             "return_full_text": False,
         }
     }
-
-    try:
-        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
-
-        # Debug panel
-        with st.expander("Hugging Face API debug", expanded=False):
-            st.code(f"Status: {r.status_code}\nURL: {HF_API_URL}", language="bash")
-            try:
-                text_preview = r.text[:2000] + ("..." if len(r.text) > 2000 else "")
-                st.code(text_preview, language="json")
-            except Exception:
-                st.write("Non-text response.")
-
-        # Specific 404 handling (common when model ID is wrong or token lacks access)
-        if r.status_code == 404:
-            # Try fallbacks automatically (if user allows it)
-            use_fallback = st.session_state.get("use_fallback_models", True)
-            if not use_fallback or not FALLBACK_MODELS:
-                st.error(
-                    f"HF 404: Model '{HF_MODEL}' not found or not accessible to this token. "
-                    "Check the exact repo ID (case-sensitive), remove quotes/spaces in secrets, or accept the model’s terms."
-                )
-                return ""
-
-            for fb in FALLBACK_MODELS:
-                fb_url = f"https://api-inference.huggingface.co/models/{fb}"
-                try:
-                    rr = requests.post(fb_url, headers=headers, json=payload, timeout=60)
-                    with st.expander("Hugging Face API debug (fallback)", expanded=False):
-                        st.code(f"Status: {rr.status_code}\nURL: {fb_url}", language="bash")
-                        try:
-                            prev = rr.text[:2000] + ("..." if len(rr.text) > 2000 else "")
-                            st.code(prev, language="json")
-                        except Exception:
-                            st.write("Non-text response.")
-                    if rr.ok:
-                        try:
-                            data_fb = rr.json()
-                            if isinstance(data_fb, list) and data_fb and isinstance(data_fb[0], dict):
-                                st.warning(f"Primary model 404. Used fallback: {fb}")
-                                return (data_fb[0].get("generated_text") or "").strip()
-                            if isinstance(data_fb, dict) and "generated_text" in data_fb:
-                                st.warning(f"Primary model 404. Used fallback: {fb}")
-                                return (data_fb.get("generated_text") or "").strip()
-                        except Exception:
-                            pass
-                except Exception as e:
-                    st.write(f"Fallback request failed for {fb}: {e}")
-
-            st.error(
-                "All fallback models failed or returned unexpected responses. "
-                "Consider deploying an Inference Endpoint for the chosen model or switching to a supported serverless model."
-            )
-            return ""
-
-        if not r.ok:
-            st.error(f"HF API HTTP error: {r.status_code}")
-            # Try to show JSON error if available
-            try:
-                err = r.json()
-                if isinstance(err, dict) and "error" in err:
-                    st.error(f"HF error: {err.get('error')}")
-            except Exception:
-                pass
-            return ""
-
-        # Parse JSON
-        try:
-            data = r.json()
-        except Exception as e:
-            st.error(f"Failed to parse HF JSON: {e}")
-            return ""
-
-        # Handle common HF "loading" error
-        if isinstance(data, dict) and "error" in data:
-            msg = str(data.get("error"))
-            if "loading" in msg.lower():
-                st.warning("The HF model is loading. Please try again shortly or switch to a smaller model via secrets.")
-            else:
-                st.error(f"HF API error: {msg}")
-            return ""
-
-        # Typical text-generation shape
-        if isinstance(data, list) and data and isinstance(data[0], dict):
-            return (data[0].get("generated_text") or "").strip()
-        if isinstance(data, dict) and "generated_text" in data:
-            return (data.get("generated_text") or "").strip()
-
-        st.warning("HF API returned an unexpected shape. Check the debug panel for details.")
-        return ""
-    except Exception as e:
-        st.error(f"Hugging Face request failed: {e}")
-        return ""
 
 def search_books(genre=None, author=None, title=None, limit=5):
     params = {"limit": limit, "has_fulltext": "true"}
@@ -232,7 +116,6 @@ def make_questions(title, authors, subjects, k=5):
     text = call_hf(prompt)
     if not text:
         return []
-    # Simple parse to strip numbering/bullets
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out = []
     for l in lines:
@@ -244,11 +127,10 @@ def make_questions(title, authors, subjects, k=5):
             break
     return out
 
-# ---------------- UI ----------------
-st.title("📚 Virtual Book Club (Q2 — Serverless HF)")
+st.title("Virtual Book Club")
 
 with st.sidebar:
-    st.markdown("### Hugging Face API (Serverless)")
+    st.markdown("### Hugging Face API")
     if HF_API_KEY:
         st.success("API key found in secrets ✅")
     else:
