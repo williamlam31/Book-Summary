@@ -1,5 +1,5 @@
-
 import os
+import re
 import time
 import requests
 import streamlit as st
@@ -16,16 +16,23 @@ def _secrets_get(key: str, default: str = "") -> str:
         return default
 
 def get_ollama_host() -> str:
-    # Prefer Streamlit secrets, then env var, then local default
+    # Prefer Secrets, then env var, then local default
     return _secrets_get("OLLAMA_HOST", os.getenv("OLLAMA_HOST", "http://localhost:11434")).rstrip("/")
 
 def get_ollama_model() -> str:
-    return _secrets_get("OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "llama3:latest"))
+    # DEFAULT CHANGED HERE → "gpt-oss"
+    return _secrets_get("OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "gpt-oss"))
 
 def get_ollama_headers() -> dict:
-    # Optional API key (if your gateway expects it). Sends as Bearer by default.
-    key = _secrets_get("OLLAMA_API_KEY", os.getenv("OLLAMA_API_KEY", ""))
-    return {"Authorization": f"Bearer {key}"} if key else {}
+    """
+    Optional API key support (if your proxy requires it).
+    Defaults to sending Authorization: Bearer <key>.
+    You can override the header name in the Diagnostics panel.
+    """
+    ov = st.session_state.get("OVERRIDES", {})
+    key = ov.get("API_KEY") or _secrets_get("OLLAMA_API_KEY", os.getenv("OLLAMA_API_KEY", ""))
+    header_name = ov.get("AUTH_HEADER") or "Authorization"
+    return ({header_name: f"Bearer {key}"} if key else {})
 
 def ollama_available(timeout=3.0) -> (bool, str):
     """Quick ping to check if Ollama responds; return (ok, message)."""
@@ -110,9 +117,8 @@ def make_questions(title, authors, subjects, k=5, model=None):
         return []
     lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
     qs = []
-    import re as _re
     for ln in lines:
-        ln = _re.sub(r"^\s*\d+\s*[:\.).-]?\s*", "", ln)
+        ln = re.sub(r"^\s*\d+\s*[:\.).-]?\s*", "", ln)
         if ln and ln not in qs:
             qs.append(ln)
         if len(qs) == k:
@@ -130,16 +136,31 @@ def make_questions(title, authors, subjects, k=5, model=None):
 st.title("📚 Virtual Book Club — Ollama (Debug)")
 
 with st.expander("Diagnostics", expanded=True):
-    host = get_ollama_host()
-    model = get_ollama_model()
+    # --- Overrides UI (handy if Secrets/env aren't set) ---
+    st.markdown("**Overrides (optional):**")
+    _host = st.text_input("OLLAMA_HOST", value=get_ollama_host())
+    _model = st.text_input("OLLAMA_MODEL", value=get_ollama_model())  # default now "gpt-oss"
+    _auth_header = st.text_input("Auth Header Name (default: Authorization)", value="Authorization")
+    _api_key = st.text_input("API Key (kept in memory only)", type="password", value="")
+
+    if "OVERRIDES" not in st.session_state:
+        st.session_state["OVERRIDES"] = {}
+    st.session_state["OVERRIDES"].update({
+        "OLLAMA_HOST": _host.strip().rstrip("/"),
+        "OLLAMA_MODEL": _model.strip(),
+        "AUTH_HEADER": _auth_header.strip() or "Authorization",
+        "API_KEY": _api_key.strip(),
+    })
+
+    # Connectivity check
     ok, msg = ollama_available(timeout=2.5)
-    st.markdown(f"**Host:** `{host}`")
-    st.markdown(f"**Model:** `{model}`")
+    st.markdown(f"**Host:** `{get_ollama_host()}`")
+    st.markdown(f"**Model:** `{get_ollama_model()}`")
     st.markdown(f"**Connectivity:** {('✅ ' if ok else '❌ ')+ msg}")
-    st.caption("Tip: On Streamlit Cloud, `http://localhost:11434` will not work. Point `OLLAMA_HOST` to a public server running Ollama, e.g. `http://<your-server-ip>:11434`.")
+    st.caption("On Streamlit Cloud, `http://localhost:11434` will not work. Set OLLAMA_HOST to a public server running Ollama.")
 
     if st.button("🔎 Quick test (Ask model to say 'OK')"):
-        resp = call_ollama("Respond with only the word: OK", model=model, options={"temperature": 0.1}, timeout=6.0)
+        resp = call_ollama("Respond with only the word: OK", model=get_ollama_model(), options={"temperature": 0.1}, timeout=6.0)
         st.write("Response:", resp or "(no response)")
 
 # Search controls
