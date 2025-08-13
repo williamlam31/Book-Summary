@@ -6,161 +6,10 @@ import random
 from typing import Dict, List, Optional
 import os
 
-# Configure Streamlit page
 st.set_page_config(
     page_title="Virtual Book Club",
-    page_icon="📚",
     layout="wide"
 )
-
-
-st.markdown("""
-<style>
-.book-card {
-    background-color: #f0f2f6;
-    padding: 20px;
-    border-radius: 10px;
-    margin: 10px 0;
-    border-left: 5px solid #4CAF50;
-}
-
-.discussion-section {
-    background-color: #e8f4fd;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px 0;
-}
-
-.genre-tag {
-    display: inline-block;
-    background-color: #4CAF50;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 15px;
-    margin: 2px;
-    font-size: 12px;
-}
-
-.search-info {
-    background-color: #d1ecf1;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px 0;
-    border-left: 4px solid #bee5eb;
-}
-
-/* Comprehensive removal of all white bars and containers */
-.main .block-container {
-    padding-top: 1rem !important;
-    padding-bottom: 0rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-}
-
-/* Target all potential container elements */
-.stMarkdown {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-}
-
-div[data-testid="stMarkdownContainer"] {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-}
-
-.element-container {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-}
-
-/* Remove all button spacing and backgrounds */
-.stButton {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-}
-
-div[data-testid="stButton"] {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-}
-
-.stButton > button {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-}
-
-/* Remove spacing and backgrounds from all containers */
-.stContainer {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-    padding: 0px !important;
-}
-
-div[data-testid="stContainer"] {
-    margin-bottom: 0px !important;
-    margin-top: 0px !important;
-    background-color: transparent !important;
-    padding: 0px !important;
-}
-
-/* Target column containers specifically */
-div[data-testid="column"] {
-    background-color: transparent !important;
-    padding: 0px !important;
-    margin: 0px !important;
-}
-
-/* Remove backgrounds from all div elements that might be causing bars */
-div[class*="css-"] {
-    background-color: transparent !important;
-}
-
-/* Target specific container classes that might be causing the bars */
-.css-1d391kg, .css-12oz5g7, .css-1kyxreq {
-    background-color: transparent !important;
-    padding: 0px !important;
-    margin: 0px !important;
-}
-
-/* Remove any default streamlit container styling */
-[data-testid="stVerticalBlock"] {
-    background-color: transparent !important;
-    padding: 0px !important;
-    margin: 0px !important;
-}
-
-[data-testid="stHorizontalBlock"] {
-    background-color: transparent !important;
-    padding: 0px !important;
-    margin: 0px !important;
-}
-
-/* Additional targeting for any remaining white/light containers */
-div[style*="background-color"] {
-    background-color: transparent !important;
-}
-
-/* Ensure main content area has no background */
-.main {
-    background-color: transparent !important;
-}
-
-/* Remove any remaining default padding/margins from containers */
-section[data-testid="stSidebar"] + div {
-    background-color: transparent !important;
-}
-
-/* Target any remaining container elements */
-.stApp > div {
-    background-color: transparent !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
 class BookClubApp:
     def __init__(self):
@@ -176,7 +25,6 @@ class BookClubApp:
             self.hf_token = os.getenv("HUGGINGFACE_TOKEN")
 
     def call_huggingface_ai(self, prompt: str, max_length: int = 200) -> str:
-        """Call Hugging Face API for AI text generation"""
         if not self.hf_token:
             return self._fallback_ai_response(prompt)
         
