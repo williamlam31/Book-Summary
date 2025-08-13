@@ -163,14 +163,9 @@ if books:
                 qs = make_questions(b["title"], b["authors"], b["subjects"], k=5)
 
             st.markdown("**Summary**")
-            st.write(summary or "No summary returned. Check the HF debug panel above.")
 
             st.markdown("**Discussion Questions**")
-            if qs:
-                for i, q in enumerate(qs, 1):
-                    st.write(f"{i}. {q}")
-            else:
-                st.write("No questions returned. Check the HF debug panel above.")
+
 
         st.divider()
 else:
