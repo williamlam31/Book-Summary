@@ -1,4 +1,5 @@
 import requests
+import os
 import streamlit as st
 
 # ---------------- Basic Config ----------------
@@ -7,15 +8,14 @@ st.set_page_config(page_title="📚 Virtual Book Club (Q2)", page_icon="📚", l
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 # ---------------- Serverless Hugging Face Inference API ----------------
-HF_API_KEY = st.secrets.get("hf_api_key", "")
+HF_API_KEY = st.secrets.get("hf_api_key") or st.secrets.get("hf_token") or os.environ.get("HF_API_KEY") or os.environ.get("HF_TOKEN")
 # sanitize model id from secrets: trim spaces and stray quotes
 HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-large") or "").strip().strip('"').strip("'")
-HF_TOKEN = st.secrets["hf_token"]  # API token from Streamlit secrets
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 # Models to try automatically if the chosen model returns 404 on serverless HF Inference
 FALLBACK_MODELS = [
-    "google/flan-t5-base",
+    "google/gemma-2b-it",
     "HuggingFaceH4/zephyr-7b-beta",
     "tiiuae/falcon-7b-instruct",
 ]
@@ -34,8 +34,8 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         st.error("No Hugging Face model set (hf_model).")
         return ""
 
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-        "Authorization": f"Bearer {HF_API_KEY}",
+    headers = {
+    # (moved into call_hf)
         # Ask serverless to wait for cold model start rather than returning 'loading'
         "x-wait-for-model": "true",
     }
@@ -49,7 +49,7 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
     }
 
     try:
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
 
         # Debug panel
         with st.expander("Hugging Face API debug", expanded=False):
@@ -74,7 +74,7 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
             for fb in FALLBACK_MODELS:
                 fb_url = f"https://api-inference.huggingface.co/models/{fb}"
                 try:
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+                    rr = requests.post(fb_url, headers=headers, json=payload, timeout=60)
                     with st.expander("Hugging Face API debug (fallback)", expanded=False):
                         st.code(f"Status: {rr.status_code}\nURL: {fb_url}", language="bash")
                         try:
