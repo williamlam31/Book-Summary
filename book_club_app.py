@@ -9,7 +9,7 @@ OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 # ---------------- Serverless Hugging Face Inference API ----------------
 HF_API_KEY = st.secrets.get("hf_api_key", "")
 # sanitize model id from secrets: trim spaces and stray quotes
-HF_MODEL = (st.secrets.get("hf_model", "meta-llama/Meta-Llama-3-8B-Instruct") or "").strip().strip('"').strip("'")
+HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-large") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 # Models to try automatically if the chosen model returns 404 on serverless HF Inference
