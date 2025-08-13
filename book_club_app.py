@@ -9,6 +9,7 @@ st.set_page_config(page_title="Virtual Book Club (Simple)", layout="wide")
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 def get_token():
+
     return (st.secrets.get("HUGGINGFACE_TOKEN", "") if hasattr(st, "secrets") else "") or os.getenv("HUGGINGFACE_TOKEN", "")
 
 def call_hf(prompt, max_length=220):
@@ -35,6 +36,7 @@ def fallback_text(prompt):
     return ""
 
 
+    return ""
     return ""
 
     title = "this book"
@@ -69,6 +71,7 @@ def search_books(genre=None, author=None, title=None, limit=5):
             if d.get("title") and d.get("author_name"):
                 out.append({
                     "title": d["title"],
+                    "work_key": d.get("key"),
                     "authors": d["author_name"],
                     "year": d.get("first_publish_year"),
                     "subjects": (d.get("subject") or [])[:5],
@@ -109,12 +112,10 @@ def make_summary(title, authors, subjects, work_key=None):
     text = call_hf(prompt, max_length=220)
     if text:
         return text.strip()
-    # Fallback to Open Library description if HF returns nothing
     desc = fetch_openlib_description(work_key) if work_key else ""
     return desc.strip() if desc else ""
 
 def make_questions(title, authors, subjects, k=5):
-    """Generate discussion questions using Hugging Face only. No templates."""
     author_txt = ", ".join(authors[:2]) if authors else "Unknown"
     topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
     prompt = (
