@@ -129,22 +129,6 @@ def make_questions(title, authors, subjects, k=5):
 
 st.title("Virtual Book Club")
 
-with st.sidebar:
-    st.markdown("### Hugging Face API")
-    if HF_API_KEY:
-        st.success("API key found in secrets ✅")
-    else:
-        st.error("No `hf_api_key` found in Streamlit secrets.")
-    st.caption(f"Model: {HF_MODEL or '(not set)'}")
-    st.caption("Using Serverless Inference API")
-    st.checkbox("Allow fallback to other models if 404", value=True, key="use_fallback_models")
-    st.divider()
-    if st.button("▶️ Test Hugging Face API"):
-        test_text = call_hf("Say 'hello' in one short friendly sentence.", max_new_tokens=16, temperature=0.2)
-        if test_text:
-            st.success(f"HF OK: {test_text}")
-        else:
-            st.error("HF call returned empty. See the debug panel below for details.")
 
 st.header("Find Books")
 c1, c2 = st.columns(2)
