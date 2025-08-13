@@ -40,35 +40,7 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
                 "temperature": float(temperature),
                 "return_full_text": False,
             }
-        }
-        try:
-            r = requests.post(url, headers=headers, json=payload, timeout=60)
-            if r.status_code == 503:
-                st.warning(f"Model '{model_name}' is loading… try again.")
-                return ""
-            if r.status_code == 404:
-                last_err = f"404 from {url}: {r.text}"
-                continue
-            r.raise_for_status()
-            data = r.json()
-
-            if isinstance(data, list) and data and isinstance(data[0], dict):
-                out = (data[0].get("generated_text") or "").strip()
-                if out:
-                    if model_name != HF_MODEL:
-                        st.info(f"Using fallback model: {model_name}")
-                    return out
-
-            if isinstance(data, dict) and data.get("error"):
-                last_err = f"{url} -> {data.get('error')}"
-                continue
-
-            last_err = f"Unexpected response from {url}: {data}"
-            continue
-
-        except Exception as e:
-            last_err = f"{type(e).__name__}: {e}"
-
+        
 
 
 def search_books(genre=None, author=None, title=None, limit=5):
