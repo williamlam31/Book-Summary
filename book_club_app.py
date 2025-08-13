@@ -4,6 +4,65 @@ import time
 import requests
 import streamlit as st
 
+# === Hugging Face (Option A) Summarization & Question Generation ===
+try:
+    from transformers import pipeline
+    HF_SUMMARIZER_MODEL = "facebook/bart-large-cnn"
+    summarizer = pipeline("summarization", model=HF_SUMMARIZER_MODEL)
+
+    HF_QG_MODEL = "google/flan-t5-base"
+    qg = pipeline("text2text-generation", model=HF_QG_MODEL)
+except Exception as _hf_exc:
+    # If transformers isn't available, downstream calls will surface the error in UI
+    summarizer = None
+    qg = None
+
+def _book_context(title, authors, subjects):
+    authors = authors or []
+    subjects = subjects or []
+    author_txt = ", ".join(authors[:2]) if isinstance(authors, list) else str(authors)
+    topic_txt = ", ".join(subjects[:5]) if isinstance(subjects, list) else str(subjects)
+    return f"Title: {title}\\nAuthor(s): {author_txt or 'Unknown'}\\nTopics: {topic_txt or 'general themes'}"
+
+def hf_summarize(text: str) -> str:
+    if not text:
+        return ""
+    if summarizer is None:
+        return "(Transformers not installed)"
+    out = summarizer(text, max_length=220, min_length=60, do_sample=False)
+    return (out[0].get("summary_text","") or "").strip()
+
+def hf_generate_questions(context: str, k: int = 5):
+    if not context:
+        return []
+    if qg is None:
+        return ["(Transformers not installed)"]
+    prompt = (
+        "Generate {k} thoughtful book club questions based on this text. "
+        "Return only a numbered list:\\n\\n{context}\\n\\nQuestions:"
+    ).format(k=k, context=str(context)[:3000])
+    out = qg(prompt, max_new_tokens=256, do_sample=False)
+    raw = out[0].get("generated_text","").strip()
+
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    qs = []
+    import re as _re
+    for ln in lines:
+        ln = _re.sub(r"^\\s*\\d+\\s*[:\\.).-]?\\s*", "", ln)
+        if ln.endswith("?") and ln not in qs:
+            qs.append(ln)
+        if len(qs) == k:
+            break
+    if len(qs) < k and "?" in raw:
+        parts = [p.strip()+"?" for p in raw.split("?") if p.strip()]
+        for p in parts:
+            if p not in qs:
+                qs.append(p)
+            if len(qs) == k:
+                break
+    return qs[:k]
+# === End Hugging Face block ===
+
 st.set_page_config(page_title="📚 Virtual Book Club — Ollama (Debug)", page_icon="📚", layout="wide")
 
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
@@ -45,187 +104,27 @@ def ollama_available(timeout=3.0) -> (bool, str):
     except Exception as e:
         return False, f"{type(e).__name__}: {e}"
 
-def call_ollama(prompt: str, model: str = None, options: dict = None, timeout=8.0) -> str:
-    """Call Ollama /api/generate with short timeout; return '' on failure."""
-    host = get_ollama_host()
-    model = model or get_ollama_model()
-    payload = {"model": model, "prompt": prompt, "stream": False}
-    if options:
-        payload["options"] = options
-    try:
-        r = requests.post(f"{host}/api/generate", json=payload, headers=get_ollama_headers(), timeout=timeout)
-        if not r.ok:
-            return ""
-        data = r.json()
-        return (data.get("response") or "").strip()
-    except Exception:
-        return ""
+def call_ollama(prompt: str):
+    """
+    (Stub) Ollama disabled. Using Hugging Face instead.
+    """
+    return "(Ollama disabled in this build)"
 
-# -------------------- data helpers --------------------
-def search_books(genre=None, author=None, title=None, limit=5):
-    params = {
-        "limit": limit,
-        "has_fulltext": "true",
-        "fields": "key,title,author_name,first_publish_year,subject,isbn,cover_i,ratings_average,ratings_count",
-    }
-    q = []
-    if title:  q.append(f'title:"{title.strip()}"')
-    if author: q.append(f'author:"{author.strip()}"')
-    if genre and genre != "Any Genre":
-        mapping = {"Science Fiction": "science fiction", "Self-Help": "self help"}
-        q.append(f'subject:"{mapping.get(genre, genre.lower())}"')
-    params["q"] = " AND ".join(q) if q else "fiction"
-    try:
-        r = requests.get(OPENLIB_SEARCH, params=params, timeout=10)
-        r.raise_for_status()
-        out = []
-        for d in r.json().get("docs", []):
-            if d.get("title") and d.get("author_name"):
-                out.append({
-                    "title": d["title"],
-                    "authors": d["author_name"],
-                    "year": d.get("first_publish_year"),
-                    "subjects": (d.get("subject") or [])[:5],
-                    "cover_id": d.get("cover_i"),
-                    "rating": d.get("ratings_average"),
-                    "rating_count": d.get("ratings_count", 0),
-                    "work_key": d.get("key"),
-                })
-        return out
-    except Exception:
-        return []
 
 def cover_url(cover_id, size="M"):
     return f"https://covers.openlibrary.org/b/id/{cover_id}-{size}.jpg" if cover_id else None
 
-def make_summary(title, authors, subjects, model=None):
-    author_txt = ", ".join(authors[:2]) if authors else "Unknown"
-    topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
-    prompt = f"Write a short, clear summary for '{title}' by {author_txt} about {topic_txt}. Summary:"
-    return call_ollama(prompt, model=model or get_ollama_model(), options={"temperature": 0.7})
+def make_summary(title, authors, subjects):
+    """
+    Replaced to use Hugging Face summarizer.
+    """
+    context = _book_context(title, authors, subjects)
+    return hf_summarize(context)
 
-def make_questions(title, authors, subjects, k=5, model=None):
-    author_txt = ", ".join(authors[:2]) if authors else "Unknown"
-    topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
-    prompt = (
-        f"Generate {k} thoughtful book club discussion questions for the book "
-        f"'{title}' by {author_txt}. Focus on {topic_txt}. "
-        f"Return ONLY the questions as a numbered list 1-{k}, one per line, no extra commentary."
-    )
-    raw = call_ollama(prompt, model=model or get_ollama_model(), options={"temperature": 0.7})
-    if not raw:
-        return []
-    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-    qs = []
-    for ln in lines:
-        ln = re.sub(r"^\s*\d+\s*[:\.).-]?\s*", "", ln)
-        if ln and ln not in qs:
-            qs.append(ln)
-        if len(qs) == k:
-            break
-    if len(qs) < k and "?" in raw:
-        parts = [p.strip()+"?" for p in raw.split("?") if p.strip()]
-        for p in parts:
-            if p not in qs:
-                qs.append(p)
-            if len(qs) == k:
-                break
-    return qs[:k]
 
-# -------------------- UI --------------------
-st.title("📚 Virtual Book Club — Ollama (Debug)")
-
-with st.expander("Diagnostics", expanded=True):
-    # --- Overrides UI (handy if Secrets/env aren't set) ---
-    st.markdown("**Overrides (optional):**")
-    _host = st.text_input("OLLAMA_HOST", value=get_ollama_host())
-    _model = st.text_input("OLLAMA_MODEL", value=get_ollama_model())  # default now "gpt-oss"
-    _auth_header = st.text_input("Auth Header Name (default: Authorization)", value="Authorization")
-    _api_key = st.text_input("API Key (kept in memory only)", type="password", value="")
-
-    if "OVERRIDES" not in st.session_state:
-        st.session_state["OVERRIDES"] = {}
-    st.session_state["OVERRIDES"].update({
-        "OLLAMA_HOST": _host.strip().rstrip("/"),
-        "OLLAMA_MODEL": _model.strip(),
-        "AUTH_HEADER": _auth_header.strip() or "Authorization",
-        "API_KEY": _api_key.strip(),
-    })
-
-    # Connectivity check
-    ok, msg = ollama_available(timeout=2.5)
-    st.markdown(f"**Host:** `{get_ollama_host()}`")
-    st.markdown(f"**Model:** `{get_ollama_model()}`")
-    st.markdown(f"**Connectivity:** {('✅ ' if ok else '❌ ')+ msg}")
-    st.caption("On Streamlit Cloud, `http://localhost:11434` will not work. Set OLLAMA_HOST to a public server running Ollama.")
-
-    if st.button("🔎 Quick test (Ask model to say 'OK')"):
-        resp = call_ollama("Respond with only the word: OK", model=get_ollama_model(), options={"temperature": 0.1}, timeout=6.0)
-        st.write("Response:", resp or "(no response)")
-
-# Search controls
-st.header("Find Your Book(s)")
-c1, c2 = st.columns(2)
-with c1:
-    genre = st.selectbox(
-        "Genre:",
-        ["Any Genre", "Fiction", "Mystery", "Romance", "Science Fiction", "Fantasy", "Biography", "History", "Self-Help", "Business", "Philosophy", "Psychology", "Poetry", "Horror", "Thriller", "Adventure"],
-    )
-with c2:
-    book_limit = st.selectbox("Number of Results:", list(range(1, 11)), index=4)
-
-c3, c4 = st.columns(2)
-with c3:
-    author = st.text_input("Author (optional)")
-with c4:
-    title = st.text_input("Book Title (optional)")
-
-if st.button("🔍 Search"):
-    with st.spinner("Searching..."):
-        books = search_books(genre if genre != "Any Genre" else None, author.strip() or None, title.strip() or None, book_limit)
-        st.session_state["books"] = books
-        st.session_state["search_performed"] = True
-
-if "ai_cache" not in st.session_state:
-    st.session_state["ai_cache"] = {}
-
-if st.session_state.get("search_performed"):
-    books = st.session_state.get("books", [])
-    if not books:
-        st.warning("No books found. Try broadening your search.")
-    else:
-        st.subheader(f"Found {len(books)} book(s)")
-        for book in books:
-            left, right = st.columns([1, 2], vertical_alignment="top")
-            with left:
-                url = cover_url(book.get("cover_id"))
-                if url:
-                    st.image(url, width=130)
-                st.markdown(f"**{book['title']}** — *{', '.join(book['authors'][:2])}*")
-                if book.get("year"): st.write(f"📅 {book['year']}")
-                if book.get("rating"): st.write(f"⭐ {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
-                if book.get("subjects"): st.write(", ".join(book["subjects"][:3]))
-            with right:
-                key = f"{book['title']}|{book['authors'][0] if book['authors'] else 'Unknown'}|{book.get('year')}|{book.get('cover_id')}"
-                if key not in st.session_state["ai_cache"]:
-                    with st.spinner("🧠 Generating with Ollama..."):
-                        time.sleep(0.05)
-                        summary = make_summary(book["title"], book["authors"], book["subjects"], model=get_ollama_model())
-                        questions = make_questions(book["title"], book["authors"], book["subjects"], k=5, model=get_ollama_model())
-                        st.session_state["ai_cache"][key] = (summary, questions)
-                summary, questions = st.session_state["ai_cache"][key]
-
-                st.subheader("🤖 Summary")
-                if summary:
-                    st.write(summary)
-                else:
-                    st.info("No summary returned. Check Diagnostics above.")
-
-                st.subheader("💬 Discussion Questions")
-                if questions:
-                    for i, q in enumerate(questions, 1):
-                        st.write(f"{i}. {q}")
-                else:
-                    st.info("No questions returned.")
-
-            st.divider()
+def make_questions(title, authors, subjects, k=5):
+    """
+    Replaced to use Hugging Face question generator.
+    """
+    context = _book_context(title, authors, subjects)
+    return hf_generate_questions(context, k=k)
