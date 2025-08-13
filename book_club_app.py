@@ -18,17 +18,33 @@ def _mask_token(tok: str) -> str:
 
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
+GROQ_API_KEY = (st.secrets.get("groq_api_key") or os.environ.get("GROQ_API_KEY") or "").strip()
+GROQ_MODEL = (st.secrets.get("groq_model", "llama3-70b-8192") or "").strip()
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
-def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
-  
-    if not HF_API_KEY:
-        st.error("No Hugging Face API key found in secrets (hf_api_key).")
+def call_llm(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
+    if not GROQ_API_KEY:
+        st.error("No Groq API key found in secrets (groq_api_key).")
         return ""
-    if not HF_MODEL:
-        st.error("No Hugging Face model set (hf_model).")
+    if not GROQ_MODEL:
+        st.error("No Groq model set (groq_model).")
         return ""
 
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": int(max_new_tokens),
+        "temperature": float(temperature),
+    }
+    try:
+        r = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        st.error(f"Groq API call failed: {e}")
+        return ""
 
         payload = {
             "inputs": prompt,
@@ -39,59 +55,6 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
             }
         
 
-
-OPENAI_API_KEY = (st.secrets.get("openai_api_key") or os.environ.get("OPENAI_API_KEY") or "").strip()
-CHATGPT_MODEL = (st.secrets.get("openai_model", "gpt-4o-mini") or "gpt-4o-mini").strip()
-
-def _mask_token(tok: str) -> str:
-    if not tok:
-        return "(missing)"
-    tok = tok.strip()
-    if len(tok) <= 10:
-        return tok[:2] + "…" + tok[-2:]
-    return tok[:4] + "…" + tok[-4:]
-
-def call_chatgpt(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
-    """
-    Call OpenAI Chat Completions API with a concise system prompt.
-    Returns a string ("" on error) and shows friendly errors in Streamlit.
-    """
-    if not OPENAI_API_KEY:
-        st.error("No OpenAI API key found. Set 'openai_api_key' in Streamlit secrets or OPENAI_API_KEY env.")
-        return ""
-
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": CHATGPT_MODEL,
-        "temperature": float(temperature),
-        "max_tokens": int(max_new_tokens),
-        "messages": [
-            {"role": "system", "content": "You are a concise, friendly assistant for a virtual book club. Keep answers short and helpful."},
-            {"role": "user", "content": prompt},
-        ],
-    }
-    try:
-        import requests
-        r = requests.post(url, headers=headers, json=body, timeout=60)
-        # Surface quota / auth issues clearly
-        if r.status_code == 401:
-            st.error("OpenAI auth failed (401). Check your API key.")
-            return ""
-        if r.status_code == 429:
-            st.warning("Rate limited by OpenAI (429). Please try again shortly.")
-            return ""
-        r.raise_for_status()
-        data = r.json()
-        # Expected format
-        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-        return (content or "").strip()
-    except Exception as e:
-        st.error(f"OpenAI request failed: {e}")
-        return ""
 
 def search_books(genre=None, author=None, title=None, limit=5):
     params = {"limit": limit, "has_fulltext": "true"}
@@ -135,7 +98,7 @@ def make_summary(title, authors, subjects):
         f"Write a short, friendly summary of the book '{title}' by {author_txt}. "
         f"Focus on: {topic_txt}. Keep it under 100 words."
     )
-    return call_chatgpt(prompt)
+    return call_llm(prompt)
 
 def make_questions(title, authors, subjects, k=5):
     author_txt = ", ".join(authors[:2]) if authors else "Unknown"
@@ -145,7 +108,7 @@ def make_questions(title, authors, subjects, k=5):
         f"Consider these topics: {topic_txt}. "
         f"Return only a numbered list 1-{k}, one per line."
     )
-    text = call_chatgpt(prompt)
+    text = call_llm(prompt)
     if not text:
         return []
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -160,16 +123,6 @@ def make_questions(title, authors, subjects, k=5):
     return out
 
 st.title("Virtual Book Club")
-
-with st.expander("⚙️ Debug (LLM & API)", expanded=False):
-    st.write({
-        "OPENAI_MODEL": CHATGPT_MODEL,
-        "OPENAI_API_KEY_present": bool(OPENAI_API_KEY),
-        "OPENAI_API_KEY_masked": _mask_token(OPENAI_API_KEY),
-    })
-    if st.button("🔬 Test ChatGPT (The Hobbit)"):
-        sample = call_chatgpt("Summarize 'The Hobbit' in 2 sentences.", max_new_tokens=80, temperature=0.3)
-        st.write(sample or "(no output)")
 
 
 st.header("Find Books")
@@ -218,14 +171,8 @@ if books:
                 qs = make_questions(b["title"], b["authors"], b["subjects"], k=5)
 
             st.markdown("**Summary**")
-            st.write(summary or "No summary returned.")
 
             st.markdown("**Discussion Questions**")
-            if qs:
-                for i, q in enumerate(qs, 1):
-                    st.write(f"{i}. {q}")
-            else:
-                st.write("No questions returned.")
 
 
         st.divider()
