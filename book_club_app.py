@@ -9,8 +9,8 @@ OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 # ---------------- Serverless Hugging Face Inference API ----------------
 HF_API_KEY = st.secrets.get("hf_api_key", "")
 # sanitize model id from secrets: trim spaces and stray quotes
-HF_MODEL = "google/flan-t5-large"  # Hardcoded for Hugging Face serverless
-HF_TOKEN = "hf_your_api_token_here"  # Replace with your Hugging Face API token
+HF_MODEL = (st.secrets.get("hf_model", "google/flan-t5-large") or "").strip().strip('"').strip("'")
+HF_TOKEN = st.secrets["hf_token"]  # API token from Streamlit secrets
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 # Models to try automatically if the chosen model returns 404 on serverless HF Inference
@@ -49,7 +49,7 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
     }
 
     try:
-        r = requests.post(HF_API_URL, headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
         # Debug panel
         with st.expander("Hugging Face API debug", expanded=False):
@@ -74,7 +74,7 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
             for fb in FALLBACK_MODELS:
                 fb_url = f"https://api-inference.huggingface.co/models/{fb}"
                 try:
-                    rr = requests.post(fb_url, headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
                     with st.expander("Hugging Face API debug (fallback)", expanded=False):
                         st.code(f"Status: {rr.status_code}\nURL: {fb_url}", language="bash")
                         try:
