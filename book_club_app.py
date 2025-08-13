@@ -9,7 +9,6 @@ st.set_page_config(page_title="Virtual Book Club (Simple)", layout="wide")
 OPENLIB_SEARCH = "https://openlibrary.org/search.json"
 
 def get_token():
-
     return (st.secrets.get("HUGGINGFACE_TOKEN", "") if hasattr(st, "secrets") else "") or os.getenv("HUGGINGFACE_TOKEN", "")
 
 def call_hf(prompt, max_length=220):
@@ -25,15 +24,17 @@ def call_hf(prompt, max_length=220):
         )
         if r.ok and isinstance(r.json(), list) and r.json():
             text = r.json()[0].get("generated_text", "")
-      
             if text.startswith(prompt):
                 text = text[len(prompt):]
-            return text.strip() or fallback_text(prompt)
+            return text.strip()
     except Exception:
         pass
-    return fallback_text(prompt)
+    return ""
 
 def fallback_text(prompt):
+    return ""
+
+
     return ""
 
     title = "this book"
@@ -113,78 +114,32 @@ def make_summary(title, authors, subjects, work_key=None):
     return desc.strip() if desc else ""
 
 def make_questions(title, authors, subjects, k=5):
-    base = [
-        f"What stood out most to you in '{title}' and why?",
-        f"How do the characters in '{title}' change over time?",
-        f"Which theme in '{title}' felt most relevant today?",
-        f"Did anything in '{title}' challenge your views?",
-        f"How would you describe {', '.join(authors[:1]) if authors else 'the author'}'s style in one sentence?",
-        f"If you could ask the author one question about '{title}', what would it be?",
-    ]
-    for s in (subjects or [])[:2]:
-        base.append(f"How does '{title}' handle the topic of {s}?")
-    random.shuffle(base)
-    return base[:k]
-
-st.title("📚 Virtual Book Club (Simple)")
-
-st.header("Find Your Book(s)")
-row1_col1, row1_col2 = st.columns(2)
-with row1_col1:
-    genre = st.selectbox(
-        "Genre:",
-        ["Any Genre", "Fiction", "Mystery", "Romance", "Science Fiction", "Fantasy", "Biography", "History", "Self-Help", "Business", "Philosophy", "Psychology", "Poetry", "Horror", "Thriller", "Adventure"]
+    """Generate discussion questions using Hugging Face only. No templates."""
+    author_txt = ", ".join(authors[:2]) if authors else "Unknown"
+    topic_txt = ", ".join(subjects[:3]) if subjects else "general themes"
+    prompt = (
+        f"Generate {k} thoughtful book club discussion questions for the book "
+        f"'{title}' by {author_txt}. Focus on {topic_txt}. "
+        f"Return ONLY the questions as a numbered list 1-{k}, one per line, no extra commentary."
     )
-with row1_col2:
-    book_limit = st.selectbox("Number of Results:", list(range(1, 11)), index=4)
+    raw = call_hf(prompt, max_length=350)
+    if not raw:
+        return []
 
-row2_col1, row2_col2 = st.columns(2)
-with row2_col1:
-    author = st.text_input("Author (optional)")
-with row2_col2:
-    title = st.text_input("Book Title (optional)")
-
-if st.button("🔍 Search"):
-    with st.spinner("Searching..."):
-        books = search_books(genre if genre != "Any Genre" else None, author.strip() or None, title.strip() or None, book_limit)
-        st.session_state.books = books
-        st.session_state.search_performed = True
-
-
-if "ai_cache" not in st.session_state:
-    st.session_state.ai_cache = {}
-
-if st.session_state.get("search_performed") and st.session_state.get("books"):
-    st.subheader(f"Found {len(st.session_state.books)} book(s)")
-    for book in st.session_state.books:
-        left, right = st.columns([1, 2], vertical_alignment="top")
-        with left:
-            url = cover_url(book["cover_id"])
-            if url:
-                st.image(url, width=130)
-            st.markdown(f"**{book['title']}** — *{', '.join(book['authors'][:2])}*")
-            if book.get("year"): st.write(f"📅 {book['year']}")
-            if book.get("rating"): st.write(f"⭐ {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
-            if book["subjects"]: st.write(", ".join(book["subjects"][:3]))
-
-        with right:
-            key = f"{book['title']}|{book['authors'][0] if book['authors'] else 'Unknown'}|{book.get('year')}|{book.get('cover_id')}"
-            if key not in st.session_state.ai_cache:
-                with st.spinner("Thinking..."):
-                    time.sleep(0.05)
-                    s = make_summary(book["title"], book["authors"], book["subjects"], work_key=book.get("work_key"))
-                    q = make_questions(book["title"], book["authors"], book["subjects"], k=5)
-                    st.session_state.ai_cache[key] = (s, q)
-
-            summary, questions = st.session_state.ai_cache[key]
-            st.subheader("Summary")
-            if summary:
-                st.write(summary)
-            else:
-                st.info("No summary available from Open Library or AI for this title.")
-
-            st.subheader("Discussion Questions")
-            for i, q in enumerate(questions, 1):
-                st.write(f"{i}. {q}")
-
-        st.divider()
+    import re as _re
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    qs = []
+    for ln in lines:
+        ln = _re.sub(r"^\s*\d+\s*[:\.).-]?\s*", "", ln)
+        if ln and ln not in qs:
+            qs.append(ln)
+        if len(qs) == k:
+            break
+    if len(qs) < k and '?' in raw:
+        parts = [p.strip()+'?' for p in raw.split('?') if p.strip()]
+        for p in parts:
+            if p not in qs:
+                qs.append(p)
+            if len(qs) == k:
+                break
+    return qs[:k]
