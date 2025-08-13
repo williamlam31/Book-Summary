@@ -26,7 +26,7 @@ HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
     Call the Hugging Face Inference API for text2text models (e.g., FLAN-T5).
-    Returns a string ("" on error). Shows helpful errors in Streamlit.
+    Handles 404 by falling back to safe public models.
     """
     if not HF_API_KEY:
         st.error("No Hugging Face API key found in secrets (hf_api_key).")
@@ -35,39 +35,66 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         st.error("No Hugging Face model set (hf_model).")
         return ""
 
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}",
-        "x-wait-for-model": "true",
-        "x-use-cache": "true",
-    }
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": max_new_tokens,
-            "temperature": float(temperature),
-            "return_full_text": False,
+    # Ordered fallback list (first item is the configured model)
+    fallbacks = []
+    seen = set()
+    for m in [HF_MODEL, "google/flan-t5-base", "t5-small", "facebook/bart-base"]:
+        m = (m or "").strip().strip('"').strip("'")
+        if m and m not in seen:
+            fallbacks.append(m); seen.add(m)
+
+    last_err = None
+    for model_name in fallbacks:
+        url = f"https://api-inference.huggingface.co/models/{model_name}"
+        headers = {
+            "Authorization": f"Bearer {HF_API_KEY}",
+            "x-wait-for-model": "true",
+            "x-use-cache": "true",
         }
-    }
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": int(max_new_tokens),
+                "temperature": float(temperature),
+                "return_full_text": False,
+            }
+        }
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=60)
+            if r.status_code == 503:
+                st.warning(f"Model '{model_name}' is loading… try again.")
+                return ""
+            if r.status_code == 404:
+                last_err = f"404 from {url}: {r.text}"
+                continue
+            r.raise_for_status()
+            data = r.json()
 
-    try:
-        r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
-        if r.status_code == 503:
-            st.warning("Model is loading on Hugging Face… please try again.")
-            return ""
-        r.raise_for_status()
-        data = r.json()
-    except Exception as e:
-        st.error(f"Hugging Face request failed: {e}")
-        return ""
+            if isinstance(data, list) and data and isinstance(data[0], dict):
+                out = (data[0].get("generated_text") or "").strip()
+                if out:
+                    if model_name != HF_MODEL:
+                        st.info(f"Using fallback model: {model_name}")
+                    return out
 
-    if isinstance(data, list) and data and isinstance(data[0], dict):
-        return (data[0].get("generated_text") or "").strip()
+            if isinstance(data, dict) and data.get("error"):
+                last_err = f"{url} -> {data.get('error')}"
+                continue
 
-    if isinstance(data, dict) and data.get("error"):
-        st.error(f"Hugging Face error: {data['error']}")
-        return ""
+            last_err = f"Unexpected response from {url}: {data}"
+            continue
 
-    st.write("Unexpected HF response:", data)
+        except Exception as e:
+            last_err = f"{type(e).__name__}: {e}"
+
+    if last_err:
+        with st.expander("HF debug (open for details)"):
+            st.write(last_err)
+            st.write({
+                "configured_model": HF_MODEL,
+                "fallbacks_tried": fallbacks,
+            })
+        st.error("All Hugging Face model attempts failed. Check the debug panel above.")
     return ""
 
 def search_books(genre=None, author=None, title=None, limit=5):
@@ -146,6 +173,10 @@ with st.expander("⚙️ Debug: Model & API status", expanded=False):
         "HF_API_KEY_present": bool(HF_API_KEY),
         "HF_API_KEY_masked": _mask_token(HF_API_KEY),
     })
+
+if st.button("🔬 Test HF (The Hobbit)"):
+    sample = call_hf("Summarize 'The Hobbit' in 2 sentences.", max_new_tokens=80, temperature=0.3)
+    st.write(sample or "(no output)")
 
 
 st.header("Find Books")
