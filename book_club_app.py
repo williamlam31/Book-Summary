@@ -49,14 +49,12 @@ class BookClubApp:
                 result = response.json()
                 if isinstance(result, list) and len(result) > 0:
                     generated_text = result[0].get('generated_text', '')
-                    # Clean up the response by removing the original prompt
                     if generated_text.startswith(prompt):
                         generated_text = generated_text[len(prompt):].strip()
                     return generated_text if generated_text else self._fallback_ai_response(prompt)
                 else:
                     return self._fallback_ai_response(prompt)
             else:
-                # If API fails, fall back to template-based response
                 return self._fallback_ai_response(prompt)
                 
         except Exception as e:
@@ -64,14 +62,12 @@ class BookClubApp:
             return self._fallback_ai_response(prompt)
 
     def _fallback_ai_response(self, prompt: str) -> str:
-        """Fallback response when AI API is unavailable"""
         if "summary" in prompt.lower():
             return "This book offers readers a compelling narrative that explores deep themes and human experiences. The author weaves together engaging characters and thought-provoking scenarios that challenge readers to examine important life questions. Through masterful storytelling, this work provides both entertainment and insight into the human condition."
         else:
             return "This book presents fascinating themes that would make for excellent book club discussion. Consider exploring the character development, thematic elements, and how the story relates to contemporary issues."
 
     def search_books(self, genre: str = None, author: str = None, title: str = None, limit: int = 10) -> List[Dict]:
-        """Search for books by genre, author, and/or title using Open Library API"""
         try:
 
             params = {
@@ -87,7 +83,7 @@ class BookClubApp:
             if author and author.strip():
                 search_parts.append(f'author:"{author.strip()}"')
             if genre and genre != "Any Genre":
-                # Map user-friendly genres to search terms
+
                 genre_mapping = {
                     "Fiction": "fiction",
                     "Mystery": "mystery",
@@ -142,7 +138,6 @@ class BookClubApp:
             return []
 
     def get_cover_url(self, cover_id: int, size: str = "M") -> str:
-        """Get book cover URL from cover ID"""
         if cover_id:
             return f"https://covers.openlibrary.org/b/id/{cover_id}-{size}.jpg"
         return None
@@ -160,7 +155,6 @@ class BookClubApp:
         if ai_response and len(ai_response) > 50:
             return f"'{book_title}' by {author_text} explores themes of {subjects_text}. {ai_response}"
         else:
-            # Enhanced fallback with more variety
             templates = [
                 f"'{book_title}' by {author_text} is a captivating work that delves into {subjects_text}. This book offers readers a unique perspective on human nature and society, weaving together compelling characters with thought-provoking scenarios. The author's masterful storytelling creates an immersive experience that challenges readers to examine their own beliefs and assumptions.",
                 f"In '{book_title}', {author_text} delivers a powerful narrative centered around {subjects_text}. The book presents a rich tapestry of characters and situations that illuminate deeper truths about the human condition. Readers will find themselves drawn into a world that is both familiar and surprising, with insights that linger long after the final page.",
@@ -169,7 +163,6 @@ class BookClubApp:
             return random.choice(templates)
 
     def generate_discussion_questions(self, book_title: str, authors: List[str], subjects: List[str]) -> List[str]:
-        """Generate AI-powered discussion questions using Hugging Face API"""
         author_text = authors[0] if authors else "the author"
         subject_text = subjects[0] if subjects else "life"
         
@@ -180,7 +173,7 @@ class BookClubApp:
                 prompt = f"Generate discussion questions for the book '{book_title}' about {subject_text}. Question 1:"
                 ai_response = self.call_huggingface_ai(prompt, max_length=150)
                 if ai_response and "?" in ai_response:
-                    # Extract questions from AI response
+             
                     potential_questions = [q.strip() + "?" for q in ai_response.split("?") if q.strip()]
                     ai_questions.extend(potential_questions[:2])
             except:
@@ -220,10 +213,10 @@ def main():
     
     app = BookClubApp()
     
-    # Main search section
+
     st.header("Find Your Book(s)")
     
-    # Create 2x2 grid for input fields
+
     col1, col2 = st.columns(2)
     
     with col1:
@@ -237,7 +230,7 @@ def main():
     with col2:
         book_limit = st.selectbox("Number of Results:", list(range(1, 11)), index=4)
     
-    # Second row
+
     col3, col4 = st.columns(2)
     
     with col3:
@@ -262,7 +255,7 @@ def main():
         st.markdown('<div class="search-info">', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Handle search
+
     if search_button:
         if not any([selected_genre != "Any Genre", author_name.strip(), book_title.strip()]):
             st.warning("⚠️ Please provide at least one search criterion (Genre, Author, or Title)")
@@ -277,7 +270,7 @@ def main():
                 st.session_state.books = books
                 st.session_state.search_performed = True
     
-    # Display results
+
     if 'books' in st.session_state and st.session_state.get('search_performed'):
         if st.session_state.books:
             st.header(f"📚 Found {len(st.session_state.books)} Books")
@@ -286,7 +279,7 @@ def main():
                 col1, col2 = st.columns([1, 3])
                 
                 with col1:
-                    # Display book cover
+             
                     cover_url = app.get_cover_url(book['cover_id'])
                     if cover_url:
                         try:
@@ -306,7 +299,7 @@ def main():
                     if book['rating']:
                         st.write(f"⭐ Rating: {book['rating']:.1f}/5 ({book['rating_count']} ratings)")
                     
-                    # Display subjects as tags
+
                     if book['subjects']:
                         subjects_html = ""
                         for subject in book['subjects'][:3]:
@@ -314,29 +307,22 @@ def main():
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
                     
-                    # Always show AI-generated content without a button
-                    # Always show AI-generated content without a button
+              
                     with st.spinner("🧠 Generating summary and questions..."):
                         time.sleep(0.05)
                         summary = app.generate_ai_summary(book['title'], book['authors'], book['subjects'])
                         questions = app.generate_discussion_questions(book['title'], book['authors'], book['subjects'])[:5]
-                        
-                    # Display AI-generated content
-                    # Display AI-generated content
-                    st.subheader("🤖 Summary")
-                    if app.hf_token:
-                        st.info("✨ Enhanced by Hugging Face AI (server-side)")
-                    else:
-                        st.info("💡 Using built-in fallback (set HUGGINGFACE_TOKEN on server to enable AI)")
+   
+                    st.subheader("Summary")
                     st.write(summary)
                     
-                    st.subheader("💬 Discussion Questions")
+                    st.subheader("Discussion Questions")
                     for j, q in enumerate(questions, 1):
                         st.write(f"{j}. {q}")
 
             st.divider()
         else:
-            st.warning("😔 No books found matching your criteria. Try:")
+            st.warning("No books found matching your criteria. Try:")
             st.write("• Broadening your search (use 'Any Genre')")
             st.write("• Checking spelling of author name or book title")
             st.write("• Using partial matches (e.g., just first name)")
