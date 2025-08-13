@@ -1,4 +1,3 @@
-
 import requests
 import streamlit as st
 
@@ -13,11 +12,19 @@ HF_API_KEY = st.secrets.get("hf_api_key", "")
 HF_MODEL = (st.secrets.get("hf_model", "meta-llama/Meta-Llama-3-8B-Instruct") or "").strip().strip('"').strip("'")
 HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
+# Models to try automatically if the chosen model returns 404 on serverless HF Inference
+FALLBACK_MODELS = [
+    "google/gemma-2b-it",
+    "HuggingFaceH4/zephyr-7b-beta",
+    "tiiuae/falcon-7b-instruct",
+]
+
 # ---------------- Helpers ----------------
 def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) -> str:
     """
     Call the Hugging Face *serverless* Inference API for text-generation models.
     Includes a debug panel and clear error handling (404/loading/unexpected shapes).
+    Will optionally fallback to a small set of public models if 404 is returned.
     """
     if not HF_API_KEY:
         st.error("No Hugging Face API key found in secrets (hf_api_key).")
@@ -26,7 +33,11 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
         st.error("No Hugging Face model set (hf_model).")
         return ""
 
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",
+        # Ask serverless to wait for cold model start rather than returning 'loading'
+        "x-wait-for-model": "true",
+    }
     payload = {
         "inputs": prompt,
         "parameters": {
@@ -35,12 +46,13 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
             "return_full_text": False,
         }
     }
+
     try:
         r = requests.post(HF_API_URL, headers=headers, json=payload, timeout=60)
 
         # Debug panel
         with st.expander("Hugging Face API debug", expanded=False):
-            st.code(f"Status: {r.status_code}\\nURL: {HF_API_URL}", language="bash")
+            st.code(f"Status: {r.status_code}\nURL: {HF_API_URL}", language="bash")
             try:
                 text_preview = r.text[:2000] + ("..." if len(r.text) > 2000 else "")
                 st.code(text_preview, language="json")
@@ -49,9 +61,43 @@ def call_hf(prompt: str, max_new_tokens: int = 160, temperature: float = 0.7) ->
 
         # Specific 404 handling (common when model ID is wrong or token lacks access)
         if r.status_code == 404:
+            # Try fallbacks automatically (if user allows it)
+            use_fallback = st.session_state.get("use_fallback_models", True)
+            if not use_fallback or not FALLBACK_MODELS:
+                st.error(
+                    f"HF 404: Model '{HF_MODEL}' not found or not accessible to this token. "
+                    "Check the exact repo ID (case-sensitive), remove quotes/spaces in secrets, or accept the model’s terms."
+                )
+                return ""
+
+            for fb in FALLBACK_MODELS:
+                fb_url = f"https://api-inference.huggingface.co/models/{fb}"
+                try:
+                    rr = requests.post(fb_url, headers=headers, json=payload, timeout=60)
+                    with st.expander("Hugging Face API debug (fallback)", expanded=False):
+                        st.code(f"Status: {rr.status_code}\nURL: {fb_url}", language="bash")
+                        try:
+                            prev = rr.text[:2000] + ("..." if len(rr.text) > 2000 else "")
+                            st.code(prev, language="json")
+                        except Exception:
+                            st.write("Non-text response.")
+                    if rr.ok:
+                        try:
+                            data_fb = rr.json()
+                            if isinstance(data_fb, list) and data_fb and isinstance(data_fb[0], dict):
+                                st.warning(f"Primary model 404. Used fallback: {fb}")
+                                return (data_fb[0].get("generated_text") or "").strip()
+                            if isinstance(data_fb, dict) and "generated_text" in data_fb:
+                                st.warning(f"Primary model 404. Used fallback: {fb}")
+                                return (data_fb.get("generated_text") or "").strip()
+                        except Exception:
+                            pass
+                except Exception as e:
+                    st.write(f"Fallback request failed for {fb}: {e}")
+
             st.error(
-                f"HF 404: Model '{HF_MODEL}' not found or not accessible to this token. "
-                "Check the exact repo ID (case-sensitive), remove quotes/spaces in secrets, or accept the model’s terms."
+                "All fallback models failed or returned unexpected responses. "
+                "Consider deploying an Inference Endpoint for the chosen model or switching to a supported serverless model."
             )
             return ""
 
@@ -172,6 +218,7 @@ with st.sidebar:
         st.error("No `hf_api_key` found in Streamlit secrets.")
     st.caption(f"Model: {HF_MODEL or '(not set)'}")
     st.caption("Using Serverless Inference API")
+    st.checkbox("Allow fallback to other models if 404", value=True, key="use_fallback_models")
     st.divider()
     if st.button("▶️ Test Hugging Face API"):
         test_text = call_hf("Say 'hello' in one short friendly sentence.", max_new_tokens=16, temperature=0.2)
