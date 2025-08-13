@@ -370,23 +370,7 @@ def main():
 
     """)
     
-    with st.sidebar:
-        st.header("🤖 AI Configuration")
-        hf_token = st.text_input(
-            "Hugging Face Token (Optional)",
-            type="password",
-            help="Get a free token from huggingface.co/settings/tokens for enhanced AI responses"
-        )
-        if hf_token:
-            st.session_state.hf_token = hf_token
-            st.success("✅ AI Token configured!")
-        
-
     app = BookClubApp()
-    
-    # Use token from sidebar if provided
-    if hasattr(st.session_state, 'hf_token'):
-        app.hf_token = st.session_state.hf_token
     
     # Main search section
     st.header("Find Your Book(s)")
@@ -465,8 +449,7 @@ def main():
                         st.info("📖 No cover available")
                 
                 with col2:
-                    st.markdown(f"**{book['title']}**")
-                    st.write(f"*by {', '.join(book['authors'][:2])}*")
+                    st.markdown(f"**{book['title']}** — *{', '.join(book['authors'][:2])}*")
                     
                     if book['year']:
                         st.write(f"📅 Published: {book['year']}")
@@ -481,61 +464,52 @@ def main():
                             subjects_html += f'<span class="genre-tag">{subject}</span>'
                         st.markdown(subjects_html, unsafe_allow_html=True)
                     
-                    # Button to generate AI content for this book
-                    if st.button(f"🤖 Click Here for Summary and Discussion Questions regarding '{book['title'][:30]}{'...' if len(book['title']) > 30 else ''}'", key=f"btn_{i}"):
-                        with st.spinner("🧠 AI is reading and analyzing the book..."):
-                            # Simulate AI processing time
-                            time.sleep(1.5)
-                            
-                            # Generate AI summary
-                            summary = app.generate_ai_summary(
-                                book['title'],
-                                book['authors'],
-                                book['subjects']
-                            )
-                            
-                            # Generate discussion questions
-                            questions = app.generate_discussion_questions(
-                                book['title'],
-                                book['authors'],
-                                book['subjects']
-                            )
-                            
-                            # Display AI-generated content
-                            st.markdown('<div class="book-card">', unsafe_allow_html=True)
-                            st.subheader("🤖 AI-Generated Summary")
-                            if app.hf_token:
-                                st.info("✨ Enhanced by Hugging Face AI")
-                            else:
-                                st.info("💡 Basic AI response - add HF token in sidebar for enhanced summaries")
-                            st.write(summary)
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            
-                            st.markdown('<div class="discussion-section">', unsafe_allow_html=True)
-                            st.subheader("💬 Discussion Questions")
-                            for j, question in enumerate(questions, 1):
-                                st.write(f"**{j}.** {question}")
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            
-                            # Reading recommendations
-                            st.subheader("🎯 Book Club Recommendations")
-                            rec_col1, rec_col2 = st.columns(2)
-                            
-                            with rec_col1:
-                                st.write("**📋 For Discussion Leaders:**")
-                                st.write("• Focus on questions 1-3 for initial discussion")
-                                st.write("• Use questions 4-6 for deeper analysis")
-                                st.write("• End with personal connection questions")
-                                st.write("• Allow 15-20 minutes per major theme")
-                            
-                            with rec_col2:
-                                st.write("**📖 For Members:**")
-                                st.write("• Take notes on key themes while reading")
-                                st.write("• Mark passages that resonate with you")
-                                st.write("• Consider how the book relates to current events")
-                                st.write("• Come prepared with your own questions")
-                
-                st.divider()
+                    
+# Always show AI-generated content without a button
+with st.spinner("🧠 Generating summary and questions..."):
+    time.sleep(0.1)  # tiny pause to keep UI responsive if many results
+    
+    summary = app.generate_ai_summary(
+        book['title'],
+        book['authors'],
+        book['subjects']
+    )
+    questions = app.generate_discussion_questions(book['title'], book['authors'], book['subjects'])[:5]
+
+# Display AI-generated content
+st.markdown('<div class="book-card">', unsafe_allow_html=True)
+st.subheader("🤖 Summary")
+if app.hf_token:
+    st.info("✨ Enhanced by Hugging Face AI (server-side)")
+else:
+    st.info("💡 Using built-in fallback (set HUGGINGFACE_TOKEN on server to enable AI)")
+st.write(summary)
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('<div class="discussion-section">', unsafe_allow_html=True)
+st.subheader("💬 Discussion Questions")
+for j, question in enumerate(questions, 1):
+    st.write(f"**{j}.** {question}")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Reading recommendations
+st.subheader("🎯 Book Club Recommendations")
+rec_col1, rec_col2 = st.columns(2)
+with rec_col1:
+    st.write("**📋 For Discussion Leaders:**")
+    st.write("• Focus on questions 1-3 for initial discussion")
+    st.write("• Use questions 4-6 for deeper analysis")
+    st.write("• End with personal connection questions")
+    st.write("• Allow 15-20 minutes per major theme")
+with rec_col2:
+    st.write("**📖 For Members:**")
+    st.write("• Take notes on key themes while reading")
+    st.write("• Mark passages that resonate with you")
+    st.write("• Consider how the book relates to current events")
+    st.write("• Come prepared with your own questions")
+
+st.divider()
+
         
         else:
             st.warning("😔 No books found matching your criteria. Try:")
