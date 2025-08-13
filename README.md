@@ -15,7 +15,7 @@ will show. Next to each book, there will be a summary as well as 5 possible ques
 
 * https://share.streamlit.io/?utm_source=streamlit&utm_medium=referral&utm_campaign=main&utm_content=-ss-streamlit-io-topright
 
-## Set Up Link
+## Instructions
 
 * Click on the above link
 * Select Genre, Input Author, or Input Title
